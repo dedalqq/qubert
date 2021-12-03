@@ -1,10 +1,8 @@
-.PHONY: all
-.PHONY: build
-.PHONY: test
-
 COMMIT := $(shell git rev-parse --short HEAD)
 VERSION := $(shell git describe --tags)
 LDFLAGS := "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -s -w"
+
+.PHONY: all build test
 
 all: build
 

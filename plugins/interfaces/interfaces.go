@@ -12,7 +12,70 @@ import (
 	. "qubert/pluginTools"
 )
 
+type interfaceConfig struct {
+	Name    string   `json:"name"`
+	IpAddrs []string `json:"addrs"`
+}
+
 type PluginSettings struct {
+	Interfaces []*interfaceConfig `json:"interfaces"`
+}
+
+func (ps *PluginSettings) setAddr(name string, ip net.IPNet) {
+	for _, i := range ps.Interfaces {
+		if i.Name == name {
+			i.IpAddrs = append(i.IpAddrs, ip.String())
+			return
+		}
+	}
+
+	ps.Interfaces = append(ps.Interfaces, &interfaceConfig{
+		Name:    name,
+		IpAddrs: []string{ip.String()},
+	})
+}
+
+func (ps *PluginSettings) delAddr(name string, ip net.IPNet) {
+	for _, i := range ps.Interfaces {
+		if i.Name == name {
+			for j, a := range i.IpAddrs {
+				if a == ip.String() {
+					i.IpAddrs = append(i.IpAddrs[:j], i.IpAddrs[j+1:]...)
+
+					return
+				}
+			}
+		}
+	}
+}
+
+func loadAddresses(Interfaces []*interfaceConfig) error {
+	for _, i := range Interfaces {
+		link, err := netlink.LinkByName(i.Name)
+		if err != nil {
+			return err
+		}
+
+		for _, a := range i.IpAddrs {
+			ip, ipNet, err := net.ParseCIDR(a)
+			if err != nil {
+				return err
+			}
+
+			err = netlink.AddrAdd(link, &netlink.Addr{
+				IPNet: &net.IPNet{
+					IP:   ip,
+					Mask: ipNet.Mask,
+				},
+				Label: link.Attrs().Name,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 type Plugin struct {
@@ -38,6 +101,11 @@ func (p *Plugin) Run(ctx context.Context, api PluginAPI) error {
 	p.ctx = ctx
 
 	err := p.api.LoadModuleConfig(&p.settings)
+	if err != nil {
+		return err
+	}
+
+	err = loadAddresses(p.settings.Interfaces)
 	if err != nil {
 		return err
 	}
@@ -77,13 +145,22 @@ func (p *Plugin) Actions() ActionsMap {
 						return NewErrorAlertActionResult(err)
 					}
 
+					addr := net.IPNet{
+						IP:   ip,
+						Mask: ipNet.Mask,
+					}
+
 					err = netlink.AddrAdd(link, &netlink.Addr{
-						IPNet: &net.IPNet{
-							IP:   ip,
-							Mask: ipNet.Mask,
-						},
+						IPNet: &addr,
 						Label: link.Attrs().Name,
 					})
+					if err != nil {
+						return NewErrorAlertActionResult(err)
+					}
+
+					p.settings.setAddr(linkName, addr)
+
+					err = p.api.SaveModuleConfig(&p.settings)
 					if err != nil {
 						return NewErrorAlertActionResult(err)
 					}
@@ -128,12 +205,21 @@ func (p *Plugin) Actions() ActionsMap {
 				return NewReloadActionResult()
 			}
 
+			addr := net.IPNet{
+				IP:   ip,
+				Mask: ipNet.Mask,
+			}
+
 			err = netlink.AddrDel(link, &netlink.Addr{
-				IPNet: &net.IPNet{
-					IP:   ip,
-					Mask: ipNet.Mask,
-				},
+				IPNet: &addr,
 			})
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			p.settings.delAddr(linkName, addr)
+
+			err = p.api.SaveModuleConfig(&p.settings)
 			if err != nil {
 				return NewErrorAlertActionResult(err)
 			}
