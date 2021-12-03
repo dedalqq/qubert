@@ -15,6 +15,7 @@ import (
 	"qubert/logger"
 	"qubert/resources"
 
+	"qubert/plugins/interfaces"
 	"qubert/plugins/services"
 	"qubert/plugins/system"
 	"qubert/plugins/systemd"
@@ -78,6 +79,7 @@ func (a *Application) Run(ctx context.Context) error {
 		a.cfg.SettingsFile,
 		a.sm,
 		&services.Plugin{},
+		&interfaces.Plugin{},
 		&systemd.Plugin{},
 		&system.Plugin{},
 	)
