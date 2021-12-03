@@ -41,7 +41,7 @@ func main() {
 		dirName = pathData[0]
 		srcPath = pathData[1]
 
-		err := filepath.Walk(srcPath, func(itemPath string, info os.FileInfo, err error) error {
+		err = filepath.Walk(srcPath, func(itemPath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
