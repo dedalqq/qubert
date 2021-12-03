@@ -25,12 +25,17 @@ type Application struct {
 	log *logger.Logger
 	pc  *pluginController
 	sm  *sessionManager
+
+	version string
+	commit  string
 }
 
-func NewApplication(cfg *Config) *Application {
+func NewApplication(cfg *Config, version string, commit string) *Application {
 	return &Application{
-		cfg: cfg,
-		log: logger.CreateLogger(cfg.Debug),
+		cfg:     cfg,
+		log:     logger.CreateLogger(cfg.Debug),
+		version: version,
+		commit:  commit,
 	}
 }
 
@@ -76,6 +81,8 @@ func (a *Application) Run(ctx context.Context) error {
 		&systemd.Plugin{},
 		&system.Plugin{},
 	)
+
+	a.pc.setVersion(a.version, a.commit)
 
 	ctx = makeContext(ctx, a.log)
 

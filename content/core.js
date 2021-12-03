@@ -150,7 +150,7 @@ let core = {
 
         ui.build({tag: "div", classes: ["login", "card", "shadow"], el: [
             {tag: "img", src: "apple-touch-icon.png"},
-            {tag: "h1", text: "Q-bert"},
+            {tag: "h1", text: "Qubert"},
             {tag: "form", cb: function (e) {form = e}, el: [
                 {tag: "input", classes: ["form-control", "mb-3"], type: "text", name: "username", placeholder: "login", cb: function (e) {login_input = e}},
                 {tag: "input", classes: ["form-control", "mb-3"], type: "password", name: "password", placeholder: "password", cb: function (e) {password_input = e}},
@@ -257,7 +257,7 @@ let core = {
             {tag: "div", classes: ["bg-dark", "shadow-sm", "rounded", "p-3", "my-3", "d-flex"], el: [
                 {tag: "h1", classes: ["text-white"], el: [
                     {tag: "img", src: "apple-touch-icon.png", classes: ["logo", "me-3"]},
-                    {text: "Q-bert"},
+                    {text: "Qubert"},
                 ]},
             ]},
             {tag: "div", classes: ["row"], el: [
@@ -271,7 +271,7 @@ let core = {
                         {tag: "li", classes: ["nav-item"], el: pluginsLinks}
                     ]},
                     {tag: "hr"},
-                    {tag: "span", classes: ["version"], text: "Version: 0.1"},
+                    {tag: "span", classes: ["version"], text: "By dedal.qq (c) 2021"},
                 ]},
                 {tag: "div", classes: ["col-sm-10"], el: [
                     {tag: "div", classes: ["main", "rounded", "bg-white", "shadow-sm", "p-3"], cb: function(e) { core.main = e }, el: [

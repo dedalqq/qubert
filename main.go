@@ -11,9 +11,15 @@ import (
 	"qubert/logger"
 )
 
+var (
+	Version string
+	Commit  string
+)
+
 type options struct {
-	ConfigFile string `short:"c" long:"config" description:"Config file"`
-	Background bool   `short:"b" description:"Run in background"`
+	ConfigFile  string `short:"c" long:"config" description:"Config file"`
+	Daemon      bool   `short:"d" long:"daemon" description:"Run as daemon"`
+	ShowVersion bool   `short:"v" long:"version" description:"Show version and exit"`
 }
 
 func main() {
@@ -55,7 +61,7 @@ func RunInBackground(args []string) error {
 		},
 	}
 
-	p, err := os.StartProcess(args[0], append([]string{"qbert"}, args[1:]...), attr)
+	p, err := os.StartProcess(args[0], append([]string{"qubert"}, args[1:]...), attr)
 	if err != nil {
 		return err
 	}
@@ -77,16 +83,28 @@ func mainFunc(args []string) error {
 		ConfigFile: "config.json",
 	}
 
-	_, err := flags.ParseArgs(opt, args)
+	flagParser := flags.NewParser(opt, flags.HelpFlag|flags.PassDoubleDash)
+
+	_, err := flagParser.ParseArgs(args)
 	if err != nil {
 		return err
 	}
 
-	if opt.Background {
+	if opt.Daemon {
 		err = RunInBackground(args)
 		if err != nil {
 			return err
 		}
+	}
+
+	if opt.ShowVersion {
+		message := `Qubert
+
+Version: %s
+Git commit: %s
+`
+		_, _ = fmt.Fprintf(os.Stderr, message, Version, Commit)
+		return nil
 	}
 
 	ctx := context.Background()
@@ -96,7 +114,7 @@ func mainFunc(args []string) error {
 		return err
 	}
 
-	app := application.NewApplication(cfg)
+	app := application.NewApplication(cfg, Version, Commit)
 
 	err = app.Run(ctx)
 	if err != nil {

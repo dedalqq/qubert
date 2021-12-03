@@ -25,4 +25,4 @@ jobs:
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         allowUpdates: true
-        artifacts: "build/qbert-linux-x86"
+        artifacts: "build/qubert-linux-x86"

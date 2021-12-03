@@ -97,7 +97,7 @@ func (i *pluginAPI) Restart() error {
 }
 
 func (i *pluginAPI) Version() (string, string) {
-	return "123", "123"
+	return i.c.version, i.c.commit
 }
 
 type plugin interface {
@@ -138,6 +138,9 @@ type pluginController struct {
 	sessions *sessionManager
 
 	plugins []plugin
+
+	version string
+	commit  string
 }
 
 func newPluginController(settingsFile string, sessions *sessionManager, pp ...plugin) *pluginController {
@@ -151,6 +154,11 @@ func newPluginController(settingsFile string, sessions *sessionManager, pp ...pl
 	}
 
 	return pc
+}
+
+func (c *pluginController) setVersion(version string, commit string) {
+	c.version = version
+	c.commit = commit
 }
 
 func (c *pluginController) loadSettings() error {
