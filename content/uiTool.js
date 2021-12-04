@@ -78,10 +78,28 @@ let uiTool = {
         let selectOptions = []
 
         for (const v in options.options) {
-            selectOptions.push({tag: "option", value: v, text: options.options[v]})
+            let opt = {tag: "option", value: v, text: options.options[v]}
+
+            if (options.value === v) {
+                opt.selected = "selected"
+            }
+
+            selectOptions.push(opt)
         }
 
-        return {tag: "select", classes: ["form-control"], name: options.name, id: options.id, el: selectOptions}
+        let select = {
+            tag: "select",
+            classes: ["form-control"],
+            name: options.name,
+            id: options.id,
+            el: selectOptions,
+        }
+
+        if (options["change-action"]) {
+            select.onchange = core.actionFunc(options["change-action"])
+        }
+
+        return select
     },
 
     textarea: function(options) {
@@ -105,6 +123,19 @@ let uiTool = {
         }
 
         return {tag: "div", el: elements}
+    },
+
+    switch: function (options) {
+        return {tag: "div", classes: ["form-check", "form-switch"], el: [
+            {
+                tag: "input",
+                classes: ["form-check-input"],
+                name: options.name,
+                id: options.id,
+                type: "checkbox",
+                role: "switch",
+            }
+        ]}
     },
 
     elementList: function(options) {
@@ -447,6 +478,8 @@ let uiTool = {
                 return uiTool.select(element.options);
             case "textarea":
                 return uiTool.textarea(element.options);
+            case "switch":
+                return uiTool.switch(element.options);
             case "element-list":
                 return uiTool.elementList(element.options);
             case "form":

@@ -113,3 +113,7 @@ h3 {
     font-size: 11pt;
     padding-left: 20px;
 }
+
+.modal {
+    background: #0000001c;
+}

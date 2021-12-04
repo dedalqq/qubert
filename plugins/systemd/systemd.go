@@ -192,8 +192,10 @@ func (p *Plugin) Actions() ActionsMap {
 					"Edit unit file",
 					NewForm().
 						AddWithTitle("Unit file content", NewCodeEditor("data", string(unitContent))).
-						AddActionButton(NewButton("Save", "edit", "save", unitName)).
-						AddActionButton(NewButton("Cancel", "")),
+						AddActionButtons(
+							NewButton("Cancel", "none").SetStyle(StyleSecondary),
+							NewButton("Save", "edit", "save", unitName),
+						),
 				)
 			}
 
@@ -238,8 +240,10 @@ func (p *Plugin) Actions() ActionsMap {
 					AddWithTitle("Service name", NewInput("name")).
 					AddWithTitle("Exec", NewInput("exec")).
 					AddWithTitle("Description", NewInput("description")).
-					AddActionButton(NewButton("Create", "create-service", "save")).
-					AddActionButton(NewButton("Cancel", "none")),
+					AddActionButtons(
+						NewButton("Cancel", "none").SetStyle(StyleSecondary),
+						NewButton("Create", "create-service", "save"),
+					),
 			)
 		},
 

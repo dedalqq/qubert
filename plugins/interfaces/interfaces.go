@@ -49,6 +49,20 @@ func (ps *PluginSettings) delAddr(name string, ip net.IPNet) {
 	}
 }
 
+func (ps *PluginSettings) addrExist(name string, ip net.IPNet) bool {
+	for _, i := range ps.Interfaces {
+		if i.Name == name {
+			for _, a := range i.IpAddrs {
+				if a == ip.String() {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
+}
+
 func loadAddresses(Interfaces []*interfaceConfig) error {
 	for _, i := range Interfaces {
 		link, err := netlink.LinkByName(i.Name)
@@ -119,6 +133,72 @@ func (p *Plugin) Actions() ActionsMap {
 			return NewSetArgsActionResult(args...)
 		},
 
+		"add-device": func(args []string, data io.Reader) ActionResult {
+			confirm := "confirm" == args[0]
+
+			reqData := struct {
+				Name    string `json:"name"`
+				DevType string `json:"dev-type"`
+				Manage  bool   `json:"manage"`
+
+				VlanID int `json:"vlan-id"`
+			}{}
+
+			err := json.NewDecoder(data).Decode(&reqData)
+			if err != nil && err != io.EOF {
+				return NewErrorAlertActionResult(err)
+			}
+
+			form := NewForm()
+
+			form.AddWithTitle("Device name", NewInput("name"))
+
+			form.AddWithTitle("Device type",
+				NewSelect("dev-type").SetChangeAction("add-device", "").SetValue(reqData.DevType).
+					AddNamedOption("Vlan", "vlan").
+					AddNamedOption("Bridge", "bridge").
+					AddNamedOption("WireGuard", "wg").
+					AddNamedOption("Tun/Tap", "tun"),
+			)
+
+			form.AddWithTitle("Manage", NewSwitch("manage"))
+
+			switch reqData.DevType {
+			case "vlan":
+				if confirm {
+
+				}
+
+				form.AddWithTitle("vlan ID", NewNumberInput("vlan-id").SetValue(reqData.VlanID))
+
+			case "bridge":
+				if confirm {
+					la := netlink.NewLinkAttrs()
+					la.Name = reqData.Name
+
+					bridgeOpt := &netlink.Bridge{LinkAttrs: la}
+					err = netlink.LinkAdd(bridgeOpt)
+					if err != nil {
+						return NewErrorAlertActionResult(err)
+					}
+
+					return NewReloadActionResult()
+				}
+
+			case "wg":
+				if confirm {
+
+				}
+			}
+
+			form.AddActionButtons(
+				NewButton("Cancel", "none").SetStyle(StyleSecondary),
+				NewButton("Add", "add-device", "confirm"),
+			)
+
+			return NewFormModalActionResult("Create device", form)
+		},
+
 		"add-ip-address": func(args []string, data io.Reader) ActionResult {
 			linkName := args[0]
 			confirm := "confirm" == args[1]
@@ -129,6 +209,7 @@ func (p *Plugin) Actions() ActionsMap {
 				reqData := struct {
 					//Label  string `json:"label"`
 					IPAddr string `json:"ip-addr"`
+					Manage bool   `json:"manage"`
 				}{}
 
 				err := json.NewDecoder(data).Decode(&reqData)
@@ -158,11 +239,13 @@ func (p *Plugin) Actions() ActionsMap {
 						return NewErrorAlertActionResult(err)
 					}
 
-					p.settings.setAddr(linkName, addr)
+					if reqData.Manage {
+						p.settings.setAddr(linkName, addr)
 
-					err = p.api.SaveModuleConfig(&p.settings)
-					if err != nil {
-						return NewErrorAlertActionResult(err)
+						err = p.api.SaveModuleConfig(&p.settings)
+						if err != nil {
+							return NewErrorAlertActionResult(err)
+						}
 					}
 
 					return NewReloadActionResult()
@@ -175,8 +258,12 @@ func (p *Plugin) Actions() ActionsMap {
 
 			//form.AddWithTitle("Label", NewInput("label"))
 			form.AddWithTitle("IP address/masc", addrInput)
+			form.AddWithTitle("Manage", NewSwitch("manage"))
 
-			form.AddActionButton(NewButton("Add", "add-ip-address", linkName, "confirm"))
+			form.AddActionButtons(
+				NewButton("Cancel", "none").SetStyle(StyleSecondary),
+				NewButton("Add", "add-ip-address", linkName, "confirm"),
+			)
 
 			return NewFormModalActionResult(fmt.Sprintf("Add IP address for %s", linkName), form)
 		},
@@ -253,13 +340,20 @@ func (p *Plugin) renderDevice(devName string) Page {
 		panic(err)
 	}
 
-	addressTable := NewTable("#", "IP address", "Label", "")
+	addressTable := NewTable("#", "IP address", "Label", "", "")
 
 	for n, a := range addrs {
+		line := NewLine()
+
+		if p.settings.addrExist(devName, *a.IPNet) {
+			line.Add(NewBadge("manage").SetStyle(StyleSuccess))
+		}
+
 		addressTable.AddLine(
 			NewLabel("%d", n+1).SetStrong(true),
 			NewLabel(a.IPNet.String()),
 			NewLabel(a.Label),
+			line,
 			NewImageButton("trash", "delete-ip-address", link.Attrs().Name, a.IPNet.String(), "confirm").SetLinkStyle(),
 		)
 	}
@@ -308,6 +402,7 @@ func (p *Plugin) renderDevList() Page {
 
 	return NewPage(
 		"Network interfaces",
+		NewButton("Add device", "add-device", ""),
 		table,
 	)
 }

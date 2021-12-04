@@ -31,7 +31,7 @@ let ui = {
                 el.href = "#"
             }
 
-            for (let opt of ["id", "for", "role", "href", "type", "name", "value", "scope", "placeholder", "tabindex", "autocomplete", "width", "height", "list", "src"]) {
+            for (let opt of ["id", "for", "role", "href", "type", "name", "value", "scope", "placeholder", "tabindex", "autocomplete", "width", "height", "list", "src", "selected"]) {
                 if (obj[opt] !== undefined) {
                     el.setAttribute(opt, obj[opt])
                 }
@@ -62,7 +62,7 @@ let ui = {
             }
         }
 
-        for (const f of ["onmousedown", "onblur", "onclick", "onkeypress", "oninput"]) {
+        for (const f of ["onmousedown", "onblur", "onclick", "onkeypress", "oninput", "onchange"]) {
             if (obj[f] !== undefined) {
                 el[f] = function(e) {
                     return obj[f](e, el)

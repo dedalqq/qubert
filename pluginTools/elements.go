@@ -43,6 +43,7 @@ const (
 	ElementTypeInput                    = "input"
 	ElementTypeSelect                   = "select"
 	ElementTypeTextarea                 = "textarea"
+	ElementSwitch                       = "switch"
 	ElementTypeElementsList             = "element-list"
 	ElementTypeForm                     = "form"
 	ElementTypeTable                    = "table"

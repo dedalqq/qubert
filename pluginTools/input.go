@@ -1,12 +1,11 @@
 package pluginTools
 
 type InputOptions struct {
-	Type      string `json:"type"`
-	Name      string `json:"name"`
-	ElementID string `json:"id"`
-	Value     string `json:"value,omitempty"`
-	OnInput   Action `json:"oninput,omitempty"`
-	Error     string `json:"error,omitempty"`
+	Type      string      `json:"type"`
+	Name      string      `json:"name"`
+	ElementID string      `json:"id"`
+	Value     interface{} `json:"value,omitempty"`
+	Error     string      `json:"error,omitempty"`
 }
 
 type Input struct {
@@ -38,15 +37,6 @@ func (i *Input) SetValue(v string) *Input {
 	return i
 }
 
-func (i *Input) SetChangeAction(cmd string, args ...string) *Input {
-	i.options.OnInput = Action{
-		CMD:  cmd,
-		Args: args,
-	}
-
-	return i
-}
-
 func (i *Input) SetErrorText(text string) *Input {
 	i.options.Error = text
 
@@ -59,6 +49,45 @@ func NewInput(name string) *Input {
 			ElementID: name,
 			Name:      name,
 			Type:      "text",
+		},
+	}
+}
+
+type NumberInput struct {
+	options InputOptions
+}
+
+func (i *NumberInput) Type() ElementType            { return ElementTypeInput }
+func (i *NumberInput) MarshalJSON() ([]byte, error) { return MarshalJSON(i.Type(), i.options) }
+
+func (i *NumberInput) ID() string {
+	return i.options.ElementID
+}
+
+func (i *NumberInput) SetID(id string) *NumberInput {
+	i.options.ElementID = id
+
+	return i
+}
+
+func (i *NumberInput) SetValue(v int) *NumberInput {
+	i.options.Value = v
+
+	return i
+}
+
+func (i *NumberInput) SetErrorText(text string) *NumberInput {
+	i.options.Error = text
+
+	return i
+}
+
+func NewNumberInput(name string) *NumberInput {
+	return &NumberInput{
+		options: InputOptions{
+			ElementID: name,
+			Name:      name,
+			Type:      "number",
 		},
 	}
 }

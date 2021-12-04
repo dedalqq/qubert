@@ -213,7 +213,10 @@ func (p *Plugin) Actions() ActionsMap {
 				NewForm().
 					AddWithTitle("Name", nameInput).
 					AddWithTitle("Command", cmdInput).
-					AddActionButton(NewButton("Add", "add-service", "save")),
+					AddActionButtons(
+						NewButton("Cancel", "none").SetStyle(StyleSecondary),
+						NewButton("Add", "add-service", "save"),
+					),
 			)
 		},
 
@@ -320,8 +323,10 @@ func (p *Plugin) Actions() ActionsMap {
 				"Rename service",
 				NewForm().
 					AddWithTitle("Name", nameInput).
-					AddActionButton(NewButton("Save", "rename", serviceID.String(), "save")).
-					AddActionButton(NewButton("Cancel", "none")),
+					AddActionButtons(
+						NewButton("Cancel", "none").SetStyle(StyleSecondary),
+						NewButton("Save", "rename", serviceID.String(), "save"),
+					),
 			)
 		},
 
@@ -384,8 +389,10 @@ func (p *Plugin) Actions() ActionsMap {
 				"Send signal",
 				NewForm().
 					AddWithTitle("Select signal", selectInput).
-					AddActionButton(NewButton("Send", "send-signal", serviceID.String(), "send").SetStyle(StyleDanger)).
-					AddActionButton(NewButton("Cancel", "none")),
+					AddActionButtons(
+						NewButton("Cancel", "none").SetStyle(StyleSecondary),
+						NewButton("Send", "send-signal", serviceID.String(), "send").SetStyle(StyleDanger),
+					),
 			)
 		},
 

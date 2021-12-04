@@ -12,8 +12,8 @@ type Form struct {
 func (f *Form) Type() ElementType            { return ElementTypeForm }
 func (f *Form) MarshalJSON() ([]byte, error) { return MarshalJSON(f.Type(), f.options) }
 
-func (f *Form) AddActionButton(button *Button) *Form {
-	f.options.Actions = append(f.options.Actions, button)
+func (f *Form) AddActionButtons(button ...*Button) *Form {
+	f.options.Actions = append(f.options.Actions, button...)
 
 	return f
 }
@@ -34,6 +34,7 @@ func NewForm() *Form {
 	return &Form{
 		options: FormOptions{
 			FormElements: NewElementsList(),
+			Actions:      []*Button{},
 		},
 	}
 }

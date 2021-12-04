@@ -1,8 +1,20 @@
 COMMIT := $(shell git rev-parse --short HEAD)
 VERSION := $(shell git describe --tags)
-LDFLAGS := "-X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -s -w"
+LDFLAGS := -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -s -w
 
-.PHONY: all build test
+.PHONY: all build
+
+DEPENDS := go.sum \
+	resources/data.go \
+	config.go \
+	main.go \
+	application/*.go \
+	logger/*.go \
+	plugins/*/*.go \
+	resources/storage.go \
+	tools/*.go \
+	uuid/*.go \
+	pluginTools/*.go
 
 all: build
 
@@ -14,11 +26,11 @@ build: build/qubert-linux-x86-64 build/qubert-linux-arm64
 go.sum:
 	go mod tidy
 
-build/qubert-linux-x86-64: go.sum resources/data.go
-	GOOS=linux GOARCH=amd64 go build -ldflags $(LDFLAGS) -o build/qubert-linux-x86-64 *.go
+build/qubert-linux-x86-64: $(DEPENDS)
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-x86-64 *.go
 
-build/qubert-linux-arm64: go.sum resources/data.go
-	GOOS=linux GOARCH=arm64 go build -ldflags $(LDFLAGS) -o build/qubert-linux-arm64 *.go
+build/qubert-linux-arm64: $(DEPENDS)
+	GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-arm64 *.go
 
 clean:
-	rm -f go.sum resources/data.go build/qubert-linux-x86
+	rm -f go.sum resources/data.go build/qubert*

@@ -1,11 +1,12 @@
 package pluginTools
 
 type SelectOptions struct {
-	Name      string            `json:"name"`
-	ElementID string            `json:"id"`
-	Value     string            `json:"value,omitempty"`
-	Options   map[string]string `json:"options"`
-	Error     string            `json:"error,omitempty"`
+	Name         string            `json:"name"`
+	ElementID    string            `json:"id"`
+	Value        string            `json:"value,omitempty"`
+	Options      map[string]string `json:"options"`
+	ChangeAction *Action           `json:"change-action,omitempty"`
+	Error        string            `json:"error,omitempty"`
 }
 
 type Select struct {
@@ -45,6 +46,15 @@ func (s *Select) AddNamedOption(name string, value string) *Select {
 
 func (s *Select) SetErrorText(text string) *Select {
 	s.options.Error = text
+
+	return s
+}
+
+func (s *Select) SetChangeAction(action string, args ...string) *Select {
+	s.options.ChangeAction = &Action{
+		CMD:  action,
+		Args: args,
+	}
 
 	return s
 }

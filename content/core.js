@@ -41,6 +41,15 @@ let core = {
                     data: core.getFormData(e.target),
                 })
 
+                let parent = el.parentNode
+                while (parent.localName !== "body") {
+                    if (parent.classList.contains("modal")) {
+                        parent.remove()
+                        break
+                    }
+                    parent = parent.parentNode
+                }
+
                 await core.actionResponseHandler(action_result)
             } finally {
                 if (cb !== undefined) {
@@ -302,18 +311,7 @@ let core = {
                 let actions = []
 
                 for (let a of data.options.actions) {
-                    let button = uiTool.createElement(a)
-
-                    let clickFunc = button.onclick
-
-                    button.onclick = async function(e, el) {
-                        await clickFunc(e)
-                        modal.remove()
-
-                        return false
-                    }
-
-                    actions.push(button)
+                    actions.push(uiTool.createElement(a))
                 }
 
                 ui.build({tag: "div", classes: ["modal", "show"], el: [

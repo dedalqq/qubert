@@ -18,6 +18,10 @@ func (l *Line) Add(e ...Element) *Line {
 }
 
 func NewLine(e ...Element) *Line {
+	if e == nil {
+		e = []Element{}
+	}
+
 	return &Line{
 		options: LineOptions{
 			Elements: e,
