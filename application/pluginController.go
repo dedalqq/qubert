@@ -109,6 +109,10 @@ type plugin interface {
 	Render([]string) pluginTools.Page
 }
 
+type subRendersPlugin interface {
+	SubRenders() []pluginTools.SubPageRender
+}
+
 type pluginSettings struct {
 	mx sync.Mutex
 

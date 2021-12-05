@@ -124,6 +124,24 @@ func (p *Plugin) Run(ctx context.Context, api PluginAPI) error {
 		return err
 	}
 
+	//ch := make(chan netlink.LinkUpdate)
+	//done := make(chan struct{})
+	//
+	//err = netlink.LinkSubscribe(ch, done)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//go func() {
+	//	select {
+	//	case <-ctx.Done():
+	//		close(done)
+	//		return
+	//	case <-ch:
+	//		p.api.Reload()
+	//	}
+	//}()
+
 	return nil
 }
 
@@ -341,12 +359,73 @@ func (p *Plugin) Actions() ActionsMap {
 }
 
 func (p *Plugin) Render(args []string) Page {
-	if len(args) > 0 {
-		devName := args[0]
-		return p.renderDevice(devName)
-	}
+	return NewPage("Network")
+}
 
-	return p.renderDevList()
+func (p *Plugin) SubRenders() []SubPageRender {
+	return []SubPageRender{
+		{
+			Title: "Interfaces",
+			Render: func(args []string) Page {
+				if len(args) > 0 {
+					devName := args[0]
+					return p.renderDevice(devName)
+				}
+
+				return p.renderDevList()
+			},
+		},
+		{
+			Title: "Routing",
+			Render: func(args []string) Page {
+				links, err := netlink.LinkList()
+				if err != nil {
+					return Page{}
+				}
+
+				table := NewTable("#", "Destination", "Gw", "Priority", "device")
+
+				i := 0
+
+				for _, l := range links {
+					routes, err := netlink.RouteList(l, netlink.FAMILY_V4)
+					if err != nil {
+						return Page{}
+					}
+
+					for _, r := range routes {
+						dst := "default"
+						if r.Dst != nil {
+							dst = r.Dst.String()
+						}
+
+						gw := ""
+						if r.Gw != nil {
+							gw = r.Gw.String()
+						}
+
+						table.AddLine(
+							NewLabel("%d", i),
+							NewLabel(dst),
+							NewLabel(gw),
+							NewLabel("%d", r.Priority),
+							NewLabel(l.Attrs().Name),
+						)
+
+						i++
+					}
+				}
+
+				return NewPage("Routing", table)
+			},
+		},
+		//{
+		//	Title: "DHCP server",
+		//	Render: func(args []string) Page {
+		//		return NewPage("DHCP server")
+		//	},
+		//},
+	}
 }
 
 func (p *Plugin) renderDevice(devName string) Page {

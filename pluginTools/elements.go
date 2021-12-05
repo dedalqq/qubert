@@ -18,6 +18,11 @@ type PluginAPI interface {
 	Version() (string, string)
 }
 
+type SubPageRender struct {
+	Title  string
+	Render func([]string) Page
+}
+
 type ActionsMap map[string]func(args []string, data io.Reader) ActionResult
 
 type ElementStyle string

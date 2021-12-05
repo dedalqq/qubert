@@ -1,5 +1,6 @@
 let core = {
     selectedModule: null,
+    selectedSubModule: 0,
     selectedModuleArgs: [],
 
     main: null,
@@ -8,6 +9,7 @@ let core = {
     pushState: function() {
         history.pushState({
             module: core.selectedModule,
+            subMod: core.selectedSubModule,
             args: core.selectedModuleArgs,
         }, "", "");
     },
@@ -15,21 +17,23 @@ let core = {
     popState: async function(data) {
         if (data) {
             this.selectedModule = data.module;
+            this.selectedSubModule = data.subMod;
             this.selectedModuleArgs = data.args;
 
             await this.renderModule(true)
         }
     },
 
-    selectModule: async function(module) {
+    selectModule: async function(module, subModule) {
         this.selectedModule = module;
+        this.selectedSubModule = subModule;
         this.selectedModuleArgs = [];
 
         this.pushState();
 
         await this.renderModule(true)
 
-        ws.setLocation(this.selectedModule, this.selectedModuleArgs)
+        ws.setLocation(this.selectedModule, this.selectedSubModule, this.selectedModuleArgs)
     },
 
     actionFunc: function(action, cb) {
@@ -128,6 +132,7 @@ let core = {
         }
 
         let page_data = await client.post(`/api/plugins/${core.selectedModule}`, {
+            sub_mod: core.selectedSubModule,
             args: core.selectedModuleArgs,
         })
 
@@ -223,30 +228,41 @@ let core = {
             let links = []
 
             for (let plugin of mainPageData.plugins) {
+                let subPages = []
+
+                for (let i in plugin["sub-pages"]) {
+                    subPages.push({tag: "li", el: [
+                        {tag: "a", classes: ["nav-link", "link-dark"], text: plugin["sub-pages"][i].title, href: "#", onclick: async function(e) {
+                                for (let l of links) {
+                                    l.classList.remove("active")
+                                }
+
+                                e.target.classList.add("active")
+
+                                await core.selectModule(plugin.id, parseInt(i) + 1)
+                        }, cb: function(e) {
+                            links.push(e)
+                        }},
+                    ]})
+                }
+
                 pluginsLinks.push(
                     {tag: "div", el: [
                         {tag: "a", classes: ["nav-link", "link-dark"], el: [
-                                {tag: "i", classes: ["bi", `bi-${plugin.icon}`, "me-2"]},
-                                {text: plugin.title},
-                            ], href: "#", onclick: async function(e) {
+                            {tag: "i", classes: ["bi", `bi-${plugin.icon}`, "me-2"]},
+                            {text: plugin.title},
+                        ], href: "#", onclick: async function(e) {
                             for (let l of links) {
                                 l.classList.remove("active")
                             }
 
                             e.target.classList.add("active")
 
-                            await core.selectModule(plugin.id)
+                            await core.selectModule(plugin.id, 0)
                         }, cb: function(e) {
                             links.push(e)
                         }},
-                        // {tag: "ul", classes: ["sub-module-list", "list-unstyled", "small"], el: [
-                        //     {tag: "li", el: [
-                        //         {tag: "a", classes: ["link-dark"], text: "Item 1"},
-                        //     ]},
-                        //     {tag: "li", el: [
-                        //         {tag: "a", classes: ["link-dark"], text: "Item 1"},
-                        //     ]}
-                        // ]}
+                        {tag: "ul", classes: ["sub-module-list", "list-unstyled", "small"], el: subPages},
                     ]}
                 )
             }

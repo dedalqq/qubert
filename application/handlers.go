@@ -146,10 +146,15 @@ func newLoginHandler(a *Application) httpserver.Handler {
 	}
 }
 
-type pluginInfo struct {
-	ID    string `json:"id"`
+type subPage struct {
 	Title string `json:"title"`
-	Icon  string `json:"icon"`
+}
+
+type pluginInfo struct {
+	ID       string    `json:"id"`
+	Title    string    `json:"title"`
+	Icon     string    `json:"icon"`
+	SubPages []subPage `json:"sub-pages"`
 }
 
 type MainPage struct {
@@ -175,11 +180,22 @@ func newMainPageHandler(a *Application) httpserver.Handler {
 			}
 
 			for _, p := range a.pc.pluginsList() {
-				data.Plugins = append(data.Plugins, pluginInfo{
-					ID:    p.ID(),
-					Title: p.Title(),
-					Icon:  p.Icon(),
-				})
+				pi := pluginInfo{
+					ID:       p.ID(),
+					Title:    p.Title(),
+					Icon:     p.Icon(),
+					SubPages: []subPage{},
+				}
+
+				if sp, ok := p.(subRendersPlugin); ok {
+					for _, sr := range sp.SubRenders() {
+						pi.SubPages = append(pi.SubPages, subPage{
+							Title: sr.Title,
+						})
+					}
+				}
+
+				data.Plugins = append(data.Plugins, pi)
 			}
 
 			return data
@@ -219,7 +235,8 @@ func newPluginActionHandler(a *Application) httpserver.Handler {
 }
 
 type renderRequest struct {
-	Args []string `json:"args"`
+	SubMode int      `json:"sub_mod"`
+	Args    []string `json:"args"`
 }
 
 func newPluginRenderHandler(a *Application) httpserver.Handler {
@@ -237,6 +254,13 @@ func newPluginRenderHandler(a *Application) httpserver.Handler {
 			err := json.NewDecoder(req.Body).Decode(&data)
 			if err != nil {
 				return httpserver.NewError(http.StatusInternalServerError, "body parsing error")
+			}
+
+			if sr, ok := pluginInstance.(subRendersPlugin); data.SubMode > 0 && ok {
+				subsRenders := sr.SubRenders()
+				if len(subsRenders) >= data.SubMode {
+					return subsRenders[data.SubMode-1].Render(data.Args)
+				}
 			}
 
 			return pluginInstance.Render(data.Args)

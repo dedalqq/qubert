@@ -39,9 +39,10 @@ let ws = {
         core.initLoginPage()
     },
 
-    setLocation: function(module, args) {
+    setLocation: function(module, subMod, args) {
         ws.socket.send(JSON.stringify({
             module: module,
+            subMod: subMod,
             args: args,
         }))
     },
