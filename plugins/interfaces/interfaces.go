@@ -157,7 +157,6 @@ func (p *Plugin) Actions() ActionsMap {
 				NewSelect("dev-type").SetChangeAction("add-device", "").SetValue(reqData.DevType).
 					AddNamedOption("Vlan", "vlan").
 					AddNamedOption("Bridge", "bridge").
-					AddNamedOption("WireGuard", "wg").
 					AddNamedOption("Tun/Tap", "tun"),
 			)
 
@@ -184,11 +183,6 @@ func (p *Plugin) Actions() ActionsMap {
 
 					return NewReloadActionResult()
 				}
-
-			case "wg":
-				if confirm {
-
-				}
 			}
 
 			form.AddActionButtons(
@@ -197,6 +191,32 @@ func (p *Plugin) Actions() ActionsMap {
 			)
 
 			return NewFormModalActionResult("Create device", form)
+		},
+
+		"delete-device": func(args []string, data io.Reader) ActionResult {
+			linkName := args[0]
+			confirm := "confirm" == args[1]
+
+			if confirm {
+				return NewModalActionResult(
+					fmt.Sprintf("Delete device %s", linkName),
+					NewLabel("Do you sure about this?"),
+					NewButton("Delete", "delete-device", linkName, "").SetStyle(StyleDanger),
+					NewButton("Cancel", "none").SetStyle(StyleSecondary),
+				)
+			}
+
+			link, err := netlink.LinkByName(linkName)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			err = netlink.LinkDel(link)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			return NewReloadActionResult()
 		},
 
 		"add-ip-address": func(args []string, data io.Reader) ActionResult {
@@ -278,7 +298,7 @@ func (p *Plugin) Actions() ActionsMap {
 					"Delete IP address",
 					NewLabel("Do you sure about this?"),
 					NewButton("Delete", "delete-ip-address", linkName, ipAddr, "").SetStyle(StyleDanger),
-					NewButton("Cancel", "none"),
+					NewButton("Cancel", "none").SetStyle(StyleSecondary),
 				)
 			}
 
@@ -378,7 +398,7 @@ func (p *Plugin) renderDevList() Page {
 		panic(err)
 	}
 
-	table := NewTable("Dev name", "Type", "Mac", "IP")
+	table := NewTable("Dev name", "Type", "Mac", "IP", "")
 
 	for _, l := range links {
 		addrs, err := netlink.AddrList(l, netlink.FAMILY_V4)
@@ -392,11 +412,20 @@ func (p *Plugin) renderDevList() Page {
 			addrsList.AddElements(NewLabel(a.IPNet.String()))
 		}
 
+		controls := NewLine()
+
+		if l.Type() == "bridge" {
+			controls.Add(
+				NewImageButton("trash", "delete-device", l.Attrs().Name, "confirm").SetLinkStyle(),
+			)
+		}
+
 		table.AddLine(
 			NewButton(l.Attrs().Name, "select-dev", l.Attrs().Name).SetLinkStyle(),
 			NewLabel(l.Type()),
 			NewLabel(l.Attrs().HardwareAddr.String()),
 			addrsList,
+			controls,
 		)
 	}
 
