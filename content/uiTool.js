@@ -74,7 +74,7 @@ let uiTool = {
         return {tag: "div", el: elements}
     },
 
-    select: function (options) {
+    select: function(options) {
         let selectOptions = []
 
         for (const v in options.options) {
@@ -125,7 +125,7 @@ let uiTool = {
         return {tag: "div", el: elements}
     },
 
-    switch: function (options) {
+    switch: function(options) {
         return {tag: "div", classes: ["form-check", "form-switch"], el: [
             {
                 tag: "input",
@@ -242,18 +242,25 @@ let uiTool = {
     },
 
     card: function(options) {
-        let headerElements = [
-            {tag: "div", classes: ["me-auto"], el: uiTool.createLabelElements(options.header)}
-        ]
+        let headerElements = []
+
+        if (options.header) {
+            headerElements.push({tag: "div", classes: ["me-auto"], el: uiTool.createLabelElements(options.header)})
+        }
 
         if (options.additional) {
             headerElements.push(uiTool.createElement(options.additional))
         }
 
-        return {tag: "div", classes: ["card", "shadow-sm"], el: [
-            {tag: "div", classes: ["card-header", "d-flex", "flex-row"], el: headerElements},
-            {tag: "div", classes: ["card-body"], el: [uiTool.createElement(options.body)]},
-        ]}
+        let cardElements = []
+
+        if (headerElements.length > 0) {
+            cardElements.push({tag: "div", classes: ["card-header", "d-flex", "flex-row"], el: headerElements})
+        }
+
+        cardElements.push({tag: "div", classes: ["card-body"], el: [uiTool.createElement(options.body)]})
+
+        return {tag: "div", classes: ["card", "shadow-sm"], el: cardElements}
     },
 
     dropdown: function(options) {
@@ -394,7 +401,7 @@ let uiTool = {
             return item
         }
 
-        let renderItems = function (editable) {
+        let renderItems = function(editable) {
             let items = []
 
             if (options.value) {
@@ -406,18 +413,18 @@ let uiTool = {
             return items
         }
 
-        let renderElement = function () {
+        let renderElement = function() {
             return {tag: "span", el: renderItems(false)}
         }
 
-        let renderInput = function (cb) {
+        let renderInput = function(cb) {
             let items = renderItems(true)
 
             items.push({tag: "input", name: `[]${options.name}`, type: "text", cb: function (el) {
                 el.style.width = `2ch`
 
                 cb(el)
-            }, onkeypress: function (e, el) {
+            }, onkeypress: function(e, el) {
                 if (e.key !== "Enter" || el.value === "") {
                     return true
                 }
@@ -565,7 +572,7 @@ let uiTool = {
         }}
     },
 
-    createLabelElements: function (labelData) {
+    createLabelElements: function(labelData) {
         let elements = []
 
         if (labelData.icon) {
