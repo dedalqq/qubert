@@ -37,29 +37,33 @@ let core = {
     },
 
     actionFunc: function(action, cb) {
-        return async function (e, el) {
-            try {
-                let action_result = await client.post(`/api/plugins/${core.selectedModule}/action`, {
-                    cmd: action.cmd,
-                    args: action.args,
-                    data: core.getFormData(e.target),
-                })
+        return function (e, el) {
+            (async function() {
+                try {
+                    let action_result = await client.post(`/api/plugins/${core.selectedModule}/action`, {
+                        cmd: action.cmd,
+                        args: action.args,
+                        data: core.getFormData(e.target),
+                    })
 
-                let parent = el.parentNode
-                while (parent.localName !== "body") {
-                    if (parent.classList.contains("modal")) {
-                        parent.remove()
-                        break
+                    let parent = el.parentNode
+                    while (parent.localName !== "body") {
+                        if (parent.classList.contains("modal")) {
+                            parent.remove()
+                            break
+                        }
+                        parent = parent.parentNode
                     }
-                    parent = parent.parentNode
-                }
 
-                await core.actionResponseHandler(action_result)
-            } finally {
-                if (cb !== undefined) {
-                    cb(e, el)
+                    await core.actionResponseHandler(action_result)
+                } finally {
+                    if (cb !== undefined) {
+                        cb(e, el)
+                    }
                 }
-            }
+            })().then()
+
+            return false
         }
     },
 
