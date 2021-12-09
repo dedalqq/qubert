@@ -3,8 +3,9 @@ package application
 import (
 	"context"
 	"io/ioutil"
-	"qubert/logger"
 	"strings"
+
+	"qubert/logger"
 )
 
 const (
