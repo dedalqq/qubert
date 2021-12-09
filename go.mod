@@ -3,6 +3,7 @@ module qubert
 go 1.17
 
 require (
+	github.com/GehirnInc/crypt v0.0.0-20200316065508-bb7000b8a962
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/dedalqq/omg.httpserver v1.5.1
 	github.com/gorilla/websocket v1.4.2

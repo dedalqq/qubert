@@ -133,7 +133,12 @@ func newLoginHandler(a *Application) httpserver.Handler {
 				return httpserver.NewError(http.StatusUnauthorized, "incorrect login or password")
 			}
 
-			if a.authUser(reqData.Login, reqData.Password) {
+			ok, err := a.authUser(reqData.Login, reqData.Password)
+			if err != nil {
+				a.log.Error(err)
+			}
+
+			if ok {
 				sn := a.sm.newSession(reqData.Login)
 
 				return &loginResponse{

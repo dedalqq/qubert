@@ -1,8 +1,12 @@
 package application
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -10,7 +14,13 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/GehirnInc/crypt"
 	"github.com/dedalqq/omg.httpserver"
+	"github.com/pkg/errors"
+
+	_ "github.com/GehirnInc/crypt/md5_crypt"
+	_ "github.com/GehirnInc/crypt/sha256_crypt"
+	_ "github.com/GehirnInc/crypt/sha512_crypt"
 
 	"qubert/logger"
 	"qubert/resources"
@@ -40,16 +50,47 @@ func NewApplication(cfg *Config, version string, commit string) *Application {
 	}
 }
 
-func (a *Application) authUser(login, password string) bool {
-	for _, u := range a.cfg.Users {
-		if data := strings.SplitN(u, ":", 2); len(data) == 2 {
-			if data[0] == login && data[1] == password {
-				return true
-			}
-		}
+func (a *Application) authUser(login, password string) (ok bool, err error) {
+	shadowData, err := ioutil.ReadFile("/etc/shadow")
+	if err != nil {
+		return false, err
 	}
 
-	return false
+	r := bufio.NewReader(bytes.NewReader(shadowData))
+
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.Errorf("Panic: %v", r)
+		}
+	}()
+
+	for {
+		line, _, err := r.ReadLine()
+		if err != nil {
+			if err == io.EOF {
+				return false, nil
+			}
+
+			return false, err
+		}
+
+		lineParts := strings.Split(string(line), ":")
+
+		if lineParts[0] != login {
+			continue
+		}
+
+		err = crypt.NewFromHash(lineParts[1]).Verify(lineParts[1], []byte(password))
+		if err != nil {
+			if err == crypt.ErrKeyMismatch {
+				continue
+			}
+
+			return false, err
+		}
+
+		return true, nil
+	}
 }
 
 func getRouter(a *Application, rs *resources.Storage) httpserver.Router {
