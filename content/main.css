@@ -1,3 +1,7 @@
+html {
+    font-size: 14px;
+}
+
 body {
     background-color: #F8F9FAFF;
     overflow-y: scroll;
@@ -77,16 +81,6 @@ h3 {
     outline:none!important;
 }
 
-.host-info > span {
-    font-size: 10pt;
-    color: #9d9d9d;
-}
-
-.host-info > div {
-    font-size: 14pt;
-    margin-top: -5px;
-}
-
 .dropdown-item-danger {
     color: var(--bs-red);
 }
@@ -106,12 +100,6 @@ h3 {
 
 .row {
     --bs-gutter-x: 0.7rem;
-}
-
-.version {
-    color: #b2b2b2;
-    font-size: 11pt;
-    padding-left: 20px;
 }
 
 .modal {

@@ -291,8 +291,8 @@ let core = {
             ]},
             {tag: "div", classes: ["row"], el: [
                 {tag: "div", classes: ["col-sm-2"], el: [
-                    {tag: "div", classes: ["host-info", "card", "shadow-sm", "p-2"], el: [
-                        {tag: "span", text: "Host name"},
+                    {tag: "div", classes: ["card", "shadow-sm", "p-2"], el: [
+                        {tag: "small", classes: ["text-secondary"], text: "Host name"},
                         {tag: "div", text: hostName},
                     ], cb: function (e) { e.style.backgroundColor = hostNameColor }},
                     {tag: "hr"},
@@ -300,7 +300,7 @@ let core = {
                         {tag: "li", classes: ["nav-item"], el: pluginsLinks}
                     ]},
                     {tag: "hr"},
-                    {tag: "span", classes: ["version"], text: "By dedal.qq (c) 2021"},
+                    {tag: "small", classes: ["p-3", "text-secondary"], text: "By dedal.qq (c) 2021"},
                 ]},
                 {tag: "div", classes: ["col-sm-10"], el: [
                     {tag: "div", classes: ["main", "rounded", "bg-white", "shadow-sm", "p-3"], cb: function(e) { core.main = e }, el: [
