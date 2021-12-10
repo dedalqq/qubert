@@ -98,6 +98,13 @@ type Action struct {
 	Args []string `json:"args,omitempty"`
 }
 
+func NewAction(cmd string, args ...string) *Action {
+	return &Action{
+		CMD:  cmd,
+		Args: args,
+	}
+}
+
 func MarshalJSON(elementType ElementType, option interface{}) ([]byte, error) {
 	return json.Marshal(ElementStruct{
 		ElementType: elementType,

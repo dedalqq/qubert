@@ -31,7 +31,7 @@ let ui = {
                 el.href = "#"
             }
 
-            for (let opt of ["id", "for", "role", "href", "type", "name", "value", "scope", "placeholder", "tabindex", "autocomplete", "width", "height", "list", "src", "selected"]) {
+            for (let opt of ["id", "for", "role", "href", "type", "name", "value", "scope", "placeholder", "tabindex", "autocomplete", "width", "height", "list", "src", "selected", "checked"]) {
                 if (obj[opt] !== undefined) {
                     el.setAttribute(opt, obj[opt])
                 }

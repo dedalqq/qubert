@@ -134,6 +134,12 @@ let uiTool = {
                 id: options.id,
                 type: "checkbox",
                 role: "switch",
+                checked: options.checked ? "checked" : undefined,
+                onchange: options.action ? function(e, el) {
+                    let data = {}
+                    data[options.name] = el.checked
+                    core.actionFunc(options.action, null, data)(e, el)
+                } : null
             }
         ]}
     },

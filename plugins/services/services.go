@@ -26,6 +26,7 @@ type service struct {
 	Dir         string   `json:"dir"`
 	Env         []string `json:"env"`
 	Description string   `json:"description,omitempty"`
+	Autostart   bool     `json:"autostart,omitempty"`
 
 	process      *os.Process
 	processState *os.ProcessState
@@ -137,6 +138,12 @@ func (p *Plugin) Run(ctx context.Context, api PluginAPI) error {
 
 	for _, s := range p.settings.Services {
 		s.uuid = uuid.New()
+
+		if s.Autostart {
+			_ = s.start(func() {
+				p.api.Reload()
+			}) // TODO error handling
+		}
 	}
 
 	return nil
@@ -153,6 +160,7 @@ type serviceUpdateDef struct {
 	Args        *[]string `json:"args"`
 	Dir         *string   `json:"dir"`
 	Description *string   `json:"description"`
+	Autostart   *bool     `json:"autostart"`
 }
 
 type signalReqData struct {
@@ -265,6 +273,10 @@ func (p *Plugin) Actions() ActionsMap {
 
 			if sd.Description != nil {
 				s.Description = *sd.Description
+			}
+
+			if sd.Autostart != nil {
+				s.Autostart = *sd.Autostart
 			}
 
 			err = p.api.SaveModuleConfig(&p.settings)
@@ -566,6 +578,10 @@ func (p *Plugin) RenderService(serviceID uuid.UUID) Page {
 			AddElementWithTitle(
 				NewLabel("Description").SetStrong(true),
 				NewTextareaEdit("description", s.Description, "update", serviceID.String()),
+			).
+			AddElementWithTitle(
+				NewLabel("Auto start").SetStrong(true),
+				NewSwitch("autostart").SetAction(NewAction("update", serviceID.String())).SetValue(s.Autostart),
 			),
 		NewHeader("Service status"),
 		NewElementsList().SetModeLine().
@@ -630,11 +646,15 @@ func serviceDropdown(s *service) *Dropdown {
 	dd.AddSeparator()
 
 	var signalAction string
+	var startAction string
 
 	if s.process != nil {
 		signalAction = "signal"
+	} else {
+		startAction = "start"
 	}
 
+	dd.AddItem("play", "Start", startAction, s.uuid.String())
 	dd.AddItem("stop", "Stop", signalAction, s.uuid.String(), "2", "confirm")
 	dd.AddItem("x", "Kill", signalAction, s.uuid.String(), "9", "confirm")
 	dd.AddItem("arrow-repeat", "Reload", signalAction, s.uuid.String(), "1")

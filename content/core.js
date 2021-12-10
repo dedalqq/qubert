@@ -36,14 +36,14 @@ let core = {
         ws.setLocation(this.selectedModule, this.selectedSubModule, this.selectedModuleArgs)
     },
 
-    actionFunc: function(action, cb) {
+    actionFunc: function(action, cb, data) {
         return function (e, el) {
             (async function() {
                 try {
                     let action_result = await client.post(`/api/plugins/${core.selectedModule}/action`, {
                         cmd: action.cmd,
                         args: action.args,
-                        data: core.getFormData(e.target),
+                        data: data ? data : core.getFormData(e.target),
                     })
 
                     let parent = el.parentNode
@@ -57,7 +57,7 @@ let core = {
 
                     await core.actionResponseHandler(action_result)
                 } finally {
-                    if (cb !== undefined) {
+                    if (cb) {
                         cb(e, el)
                     }
                 }
