@@ -159,7 +159,8 @@ func (p *Plugin) Actions() ActionsMap {
 				DevType string `json:"dev-type"`
 				Manage  bool   `json:"manage"`
 
-				VlanID int `json:"vlan-id"`
+				VlanID     int    `json:"vlan-id"`
+				VlanParent string `json:"vlan-parent"`
 			}{}
 
 			err := json.NewDecoder(data).Decode(&reqData)
@@ -169,24 +170,87 @@ func (p *Plugin) Actions() ActionsMap {
 
 			form := NewForm()
 
-			form.AddWithTitle("Device name", NewInput("name"))
+			form.AddActionButtons(
+				NewButton("Cancel", "none").SetStyle(StyleSecondary),
+				NewButton("Add", "add-device", "confirm"),
+			)
+
+			nameInput := NewInput("name").SetValue(reqData.Name)
+
+			form.AddWithTitle("Device name", nameInput)
 
 			form.AddWithTitle("Device type",
 				NewSelect("dev-type").SetChangeAction("add-device", "").SetValue(reqData.DevType).
 					AddNamedOption("Vlan", "vlan").
-					AddNamedOption("Bridge", "bridge").
-					AddNamedOption("Tun/Tap", "tun"),
+					AddNamedOption("Bridge", "bridge"),
+				//AddNamedOption("Tun/Tap", "tun"),
 			)
 
 			form.AddWithTitle("Manage", NewSwitch("manage"))
 
+			modal := NewFormModalActionResult("Create device", form)
+
+			if confirm && reqData.Name == "" {
+				nameInput.SetErrorText("Name can't be empty")
+				return modal
+			}
+
 			switch reqData.DevType {
 			case "vlan":
-				if confirm {
+				vlanParentSelect := NewSelect("vlan-parent").AddOption("").SetValue(reqData.VlanParent)
 
+				links, err := netlink.LinkList()
+				if err != nil {
+					return NewErrorAlertActionResult(err)
 				}
 
-				form.AddWithTitle("vlan ID", NewNumberInput("vlan-id").SetValue(reqData.VlanID))
+				for _, l := range links {
+					if l.Attrs().Flags&net.FlagLoopback != 0 {
+						continue
+					}
+
+					vlanParentSelect.AddOption(l.Attrs().Name)
+				}
+
+				form.AddWithTitle("Parent", vlanParentSelect)
+
+				vlanIDInput := NewNumberInput("vlan-id").SetValue(reqData.VlanID)
+				form.AddWithTitle("vlan ID", vlanIDInput)
+
+				if confirm {
+					if reqData.VlanID < 0 || reqData.VlanID > 4095 {
+						vlanIDInput.SetErrorText("Incorrect VlanID")
+						return modal
+					}
+
+					if reqData.VlanParent == "" {
+						vlanParentSelect.SetErrorText("Parent for vlan device not set")
+						return modal
+					}
+
+					la := netlink.NewLinkAttrs()
+					la.Name = reqData.Name
+
+					link, err := netlink.LinkByName(reqData.VlanParent)
+					if err != nil {
+						return NewErrorAlertActionResult(err)
+					}
+
+					la.ParentIndex = link.Attrs().Index
+
+					vlanOpt := &netlink.Vlan{
+						LinkAttrs:    la,
+						VlanId:       reqData.VlanID,
+						VlanProtocol: netlink.VLAN_PROTOCOL_8021Q,
+					}
+
+					err = netlink.LinkAdd(vlanOpt)
+					if err != nil {
+						return NewErrorAlertActionResult(err)
+					}
+
+					return NewReloadActionResult()
+				}
 
 			case "bridge":
 				if confirm {
@@ -203,12 +267,7 @@ func (p *Plugin) Actions() ActionsMap {
 				}
 			}
 
-			form.AddActionButtons(
-				NewButton("Cancel", "none").SetStyle(StyleSecondary),
-				NewButton("Add", "add-device", "confirm"),
-			)
-
-			return NewFormModalActionResult("Create device", form)
+			return modal
 		},
 
 		"delete-device": func(args []string, data io.Reader) ActionResult {
@@ -493,7 +552,7 @@ func (p *Plugin) renderDevList() Page {
 
 		controls := NewLine()
 
-		if l.Type() == "bridge" {
+		if l.Type() == "bridge" || l.Type() == "vlan" {
 			controls.Add(
 				NewImageButton("trash", "delete-device", l.Attrs().Name, "confirm").SetLinkStyle(),
 			)
