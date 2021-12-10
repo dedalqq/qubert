@@ -4,6 +4,8 @@ import "fmt"
 
 type LabelOption struct {
 	LabelData
+
+	Monospace bool `json:"monospace"`
 }
 
 type Label struct {
@@ -21,6 +23,12 @@ func (l *Label) SetImage(icon string) *Label {
 
 func (l *Label) SetStrong(value bool) *Label {
 	l.options.Strong = value
+
+	return l
+}
+
+func (l *Label) SetMonospace() *Label {
+	l.options.Monospace = true
 
 	return l
 }

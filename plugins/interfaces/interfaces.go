@@ -592,7 +592,7 @@ func (p *Plugin) renderDevice(devName string) Page {
 		NewElementsList().SetModeLine().
 			AddElementWithTitle(NewLabel("Name").SetStrong(true), NewLabel(link.Attrs().Name)).
 			AddElementWithTitle(NewLabel("Type").SetStrong(true), NewLabel(link.Type())).
-			AddElementWithTitle(NewLabel("Mac").SetStrong(true), NewLabel(link.Attrs().HardwareAddr.String())).
+			AddElementWithTitle(NewLabel("Mac").SetStrong(true), NewLabel(link.Attrs().HardwareAddr.String()).SetMonospace()).
 			AddElementWithTitle(NewLabel("Master").SetStrong(true), masterSelect),
 		NewHeader("IP addresses"),
 		NewButton("Add address", "add-ip-address", link.Attrs().Name, ""),
@@ -631,7 +631,7 @@ func (p *Plugin) renderDevList() Page {
 		table.AddLine(
 			NewButton(l.Attrs().Name, "select-dev", l.Attrs().Name).SetLinkStyle(),
 			NewLabel(l.Type()),
-			NewLabel(l.Attrs().HardwareAddr.String()),
+			NewLabel(l.Attrs().HardwareAddr.String()).SetMonospace(),
 			addrsList,
 			controls,
 		)

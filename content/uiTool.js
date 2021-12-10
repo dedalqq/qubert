@@ -30,7 +30,13 @@ let uiTool = {
     },
 
     label: function(options) {
-        return {tag: "span", el: uiTool.createLabelElements(options)}
+        let classes = []
+
+        if (options.monospace) {
+            classes.push("font-monospace")
+        }
+
+        return {tag: "span", classes: classes, el: uiTool.createLabelElements(options)}
     },
 
     formLabel: function(options) {
