@@ -47,6 +47,7 @@ const (
 	ElementTypeFormLabel                = "form-label"
 	ElementTypeInput                    = "input"
 	ElementTypeSelect                   = "select"
+	ElementTypeSelectEdit               = "select-edit"
 	ElementTypeTextarea                 = "textarea"
 	ElementSwitch                       = "switch"
 	ElementTypeElementsList             = "element-list"

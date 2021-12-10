@@ -411,6 +411,45 @@ func (p *Plugin) Actions() ActionsMap {
 			return NewReloadActionResult()
 		},
 
+		"set-master": func(args []string, data io.Reader) ActionResult {
+			linkName := args[0]
+
+			link, err := netlink.LinkByName(linkName)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			reqData := struct {
+				Master string `json:"master"`
+			}{}
+
+			err = json.NewDecoder(data).Decode(&reqData)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			if reqData.Master == "" {
+				err = netlink.LinkSetNoMaster(link)
+				if err != nil {
+					return NewErrorAlertActionResult(err)
+				}
+
+				return NewReloadActionResult()
+			}
+
+			master, err := netlink.LinkByName(reqData.Master)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			err = netlink.LinkSetMaster(link, master)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			return NewReloadActionResult()
+		},
+
 		"none": func(args []string, data io.Reader) ActionResult {
 			return NewReloadActionResult()
 		},
@@ -516,6 +555,36 @@ func (p *Plugin) renderDevice(devName string) Page {
 		)
 	}
 
+	masterSelect := NewSelectEdit("master", "set-master", link.Attrs().Name)
+
+	masterSelect.AddNamedOption("No master", "")
+
+	links, err := netlink.LinkList()
+	if err != nil {
+		panic(err)
+	}
+
+	for _, l := range links {
+		if l.Type() != "bridge" || link.Attrs().Name == l.Attrs().Name {
+			continue
+		}
+
+		masterSelect.AddOption(l.Attrs().Name)
+	}
+
+	if link.Attrs().MasterIndex > 0 {
+		masterLink, err := netlink.LinkByIndex(link.Attrs().MasterIndex)
+		if err != nil {
+			panic(err)
+		}
+
+		masterSelect.SetValue(masterLink.Attrs().Name)
+		masterSelect.SetBadgeStyle(StylePrimary)
+	} else {
+		masterSelect.SetValue("")
+		masterSelect.SetBadgeStyle(StyleSecondary)
+	}
+
 	return NewPage(
 		fmt.Sprintf("Network interface %s", link.Attrs().Name),
 		NewButton("Back", "select-dev"),
@@ -523,7 +592,8 @@ func (p *Plugin) renderDevice(devName string) Page {
 		NewElementsList().SetModeLine().
 			AddElementWithTitle(NewLabel("Name").SetStrong(true), NewLabel(link.Attrs().Name)).
 			AddElementWithTitle(NewLabel("Type").SetStrong(true), NewLabel(link.Type())).
-			AddElementWithTitle(NewLabel("Mac").SetStrong(true), NewLabel(link.Attrs().HardwareAddr.String())),
+			AddElementWithTitle(NewLabel("Mac").SetStrong(true), NewLabel(link.Attrs().HardwareAddr.String())).
+			AddElementWithTitle(NewLabel("Master").SetStrong(true), masterSelect),
 		NewHeader("IP addresses"),
 		NewButton("Add address", "add-ip-address", link.Attrs().Name, ""),
 		addressTable,

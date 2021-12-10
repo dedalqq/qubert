@@ -102,6 +102,55 @@ let uiTool = {
         return select
     },
 
+    selectEdit: function(options) {
+        let renderElement = function () {
+            let classes = []
+
+            if (options["badge-style"]) {
+                classes.push("badge", `bg-${options["badge-style"]}`)
+            }
+
+            return {tag: "span", classes: classes, text: (function() {
+                for (const v in options.options) {
+                    if (options.value === v) {
+                        return options.options[v]
+                    }
+                }
+
+                if (options.options.length > 0) {
+                    return options.options[0]
+                }
+
+                return ""
+            }())}
+        }
+
+        let renderInput = function (cb) {
+            let selectOptions = []
+
+            for (const v in options.options) {
+                let opt = {tag: "option", value: v, text: options.options[v]}
+
+                if (options.value === v) {
+                    opt.selected = "selected"
+                }
+
+                selectOptions.push(opt)
+            }
+
+            return {
+                tag: "select",
+                classes: ["form-control"],
+                name: options.name,
+                id: options.id,
+                el: selectOptions,
+                cb: cb,
+            }
+        }
+
+        return uiTool.valueEditor(options.action, renderElement, renderInput)
+    },
+
     textarea: function(options) {
         let classes = ["form-control"]
 
@@ -489,6 +538,8 @@ let uiTool = {
                 return uiTool.input(element.options);
             case "select":
                 return uiTool.select(element.options);
+            case "select-edit":
+                return uiTool.selectEdit(element.options);
             case "textarea":
                 return uiTool.textarea(element.options);
             case "switch":
