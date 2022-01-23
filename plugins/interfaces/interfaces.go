@@ -543,7 +543,7 @@ func (p *Plugin) SubRenders() []SubPageRender {
 					return Page{}
 				}
 
-				table := NewTable("#", "Destination", "Gw", "Priority", "device")
+				table := NewTable("#", "Destination", "Gw", "Priority", "", "device")
 
 				i := 0
 
@@ -552,6 +552,8 @@ func (p *Plugin) SubRenders() []SubPageRender {
 					if err != nil {
 						return Page{}
 					}
+
+					dhcpOpt := p.dhcp.getDHCPOptions(l.Attrs().Name)
 
 					for _, r := range routes {
 						dst := "default"
@@ -564,11 +566,22 @@ func (p *Plugin) SubRenders() []SubPageRender {
 							gw = r.Gw.String()
 						}
 
+						line := NewLine()
+
+						//if p.settings.addrExist(devName, *a.IPNet) {
+						//	line.Add(NewBadge("manage").SetStyle(StyleSuccess))
+						//}
+
+						if dhcpOpt != nil && dhcpOpt.gw != nil && dhcpOpt.gw.Equal(r.Gw) {
+							line.Add(NewBadge("dhcp").SetStyle(StylePrimary))
+						}
+
 						table.AddLine(
 							NewLabel("%d", i),
 							NewLabel(dst),
 							NewLabel(gw),
 							NewLabel("%d", r.Priority),
+							line,
 							NewLabel(l.Attrs().Name),
 						)
 
@@ -579,12 +592,15 @@ func (p *Plugin) SubRenders() []SubPageRender {
 				return NewPage("Routing", table)
 			},
 		},
-		//{
-		//	Title: "DHCP server",
-		//	Render: func(args []string) Page {
-		//		return NewPage("DHCP server")
-		//	},
-		//},
+		{
+			Title: "DHCP server",
+			Render: func(args []string) Page {
+				return NewPage(
+					"DHCP server",
+					NewButton("Add DHCP server", "add-dhcp-server", ""),
+				)
+			},
+		},
 	}
 }
 

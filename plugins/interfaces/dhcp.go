@@ -16,6 +16,7 @@ import (
 type dhcpClientOptions struct {
 	dev        string
 	addr       *net.IPNet
+	gw         net.IP
 	wg         sync.WaitGroup
 	cancelFunc func()
 }
@@ -114,43 +115,28 @@ func (c *dhcpClientManager) runDHCPClient(link netlink.Link) {
 					continue
 				}
 
-				newIP := net.IPNet{
+				newIP := &net.IPNet{
 					IP:   cv.YourIPAddr,
 					Mask: cv.SubnetMask(),
 				}
 
-				addrs, err := netlink.AddrList(link, netlink.FAMILY_V4)
+				var newGW net.IP
+				if rs := cv.Router(); len(rs) > 0 {
+					newGW = rs[0]
+				}
+
+				err = applyIP(link, opt.addr, newIP)
 				if err != nil {
 					//log.Error(err)
 				}
 
-				if opt.addr != nil && opt.addr.String() != newIP.String() {
-					for _, a := range addrs {
-						if a.String() == opt.addr.String() {
-							err = netlink.AddrDel(link, &netlink.Addr{IPNet: opt.addr})
-							if err != nil {
-								//log.Error(err)
-							}
-
-							break
-						}
-					}
-				}
-
-				opt.addr = &newIP
-
-				for _, a := range addrs {
-					if newIP.String() == a.String() {
-						t = time.NewTimer(cv.IPAddressLeaseTime(time.Minute) / 2)
-						c.update()
-						continue mainLoop
-					}
-				}
-
-				err = netlink.AddrAdd(link, &netlink.Addr{IPNet: &newIP})
+				err = applyGateway(link, opt.gw, newGW)
 				if err != nil {
 					//log.Error(err)
 				}
+
+				opt.addr = newIP
+				opt.gw = newGW
 
 				t = time.NewTimer(cv.IPAddressLeaseTime(time.Minute) / 2)
 				c.update()
@@ -163,4 +149,76 @@ func (c *dhcpClientManager) runDHCPClient(link netlink.Link) {
 			continue mainLoop
 		}
 	}()
+}
+
+func applyIP(link netlink.Link, addr, newIP *net.IPNet) error {
+	addrs, err := netlink.AddrList(link, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+
+	// find and delete old address if exist
+	if addr != nil && addr.String() != newIP.String() {
+		for _, a := range addrs {
+			if a.String() == addr.String() {
+				err = netlink.AddrDel(link, &netlink.Addr{IPNet: addr})
+				if err != nil {
+					return err
+				}
+
+				break
+			}
+		}
+	}
+
+	// do nothing if already exist
+	for _, a := range addrs {
+		if newIP.String() == a.String() {
+			return nil
+		}
+	}
+
+	err = netlink.AddrAdd(link, &netlink.Addr{IPNet: newIP})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func applyGateway(link netlink.Link, gw, newGW net.IP) error {
+	routes, err := netlink.RouteList(link, netlink.FAMILY_V4)
+	if err != nil {
+		return err
+	}
+
+	// find and delete old address if exist
+	if gw != nil && !gw.Equal(newGW) {
+		for _, r := range routes {
+			if r.Dst == nil && r.Gw.Equal(gw) {
+				err = netlink.RouteDel(&r)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	// do nothing if already exist
+	for _, r := range routes {
+		if r.Dst == nil && r.Gw.Equal(newGW) {
+			return nil
+		}
+	}
+
+	err = netlink.RouteAdd(&netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Dst:       nil, // default route
+		Gw:        newGW,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
