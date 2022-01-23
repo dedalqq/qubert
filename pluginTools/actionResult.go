@@ -3,10 +3,11 @@ package pluginTools
 type ActionType string
 
 const (
-	ActionTypeReload ActionType = "reload"
-	ActionTypeModal             = "modal"
-	ActionSetArgs               = "set-args"
-	ActionAlert                 = "alert"
+	ActionTypeReload     ActionType = "reload"
+	ActionTypeModal                 = "modal"
+	ActionTypeArgs                  = "set-args"
+	ActionTypeAlert                 = "alert"
+	ActionTypePartUpdate            = "part-update"
 )
 
 type ActionResult struct {
@@ -14,9 +15,23 @@ type ActionResult struct {
 	Options    interface{} `json:"options"`
 }
 
+type ActionResultReloadOptions struct {
+	Fade bool `json:"fade"`
+}
+
 func NewReloadActionResult() ActionResult {
 	return ActionResult{
 		ActionType: ActionTypeReload,
+		Options: ActionResultReloadOptions{
+			Fade: true,
+		},
+	}
+}
+
+func NewReloadWithoutFadeActionResult() ActionResult {
+	return ActionResult{
+		ActionType: ActionTypeReload,
+		Options:    ActionResultReloadOptions{},
 	}
 }
 
@@ -61,7 +76,7 @@ type ActionResultAlertOptions struct {
 
 func NewAlertActionResult(title string, text string) ActionResult {
 	return ActionResult{
-		ActionType: ActionAlert,
+		ActionType: ActionTypeAlert,
 		Options: ActionResultAlertOptions{
 			Title: title,
 			Text:  text,
@@ -71,7 +86,7 @@ func NewAlertActionResult(title string, text string) ActionResult {
 
 func NewErrorAlertActionResult(err error) ActionResult {
 	return ActionResult{
-		ActionType: ActionAlert,
+		ActionType: ActionTypeAlert,
 		Options: ActionResultAlertOptions{
 			Title: "Error",
 			Text:  err.Error(),
@@ -81,13 +96,30 @@ func NewErrorAlertActionResult(err error) ActionResult {
 
 type ActionResultSetArgsOptions struct {
 	Args []string `json:"args"`
+	Fade bool     `json:"fade"`
 }
 
-func NewSetArgsActionResult(args ...string) ActionResult {
+func NewSetArgsActionResult(fade bool, args ...string) ActionResult {
 	return ActionResult{
-		ActionType: ActionSetArgs,
+		ActionType: ActionTypeArgs,
 		Options: ActionResultSetArgsOptions{
+			Fade: fade,
 			Args: args,
+		},
+	}
+}
+
+type ActionResultPartUpdateOptions struct {
+	ElementID string  `json:"id"`
+	Element   Element `json:"element"`
+}
+
+func NewPartUpdateActionResult(elementID string, el Element) ActionResult {
+	return ActionResult{
+		ActionType: ActionTypePartUpdate,
+		Options: ActionResultPartUpdateOptions{
+			ElementID: elementID,
+			Element:   el,
 		},
 	}
 }

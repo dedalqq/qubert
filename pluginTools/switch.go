@@ -18,8 +18,11 @@ func (s *Switch) ID() string {
 	return s.options.ElementID
 }
 
-func (s *Switch) SetAction(a *Action) *Switch {
-	s.options.Action = a
+func (s *Switch) SetAction(cmd string, args ...string) *Switch {
+	s.options.Action = &Action{
+		CMD:  cmd,
+		Args: args,
+	}
 
 	return s
 }

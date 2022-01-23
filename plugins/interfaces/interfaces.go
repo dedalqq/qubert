@@ -15,10 +15,25 @@ import (
 type interfaceConfig struct {
 	Name    string   `json:"name"`
 	IpAddrs []string `json:"addrs"`
+	DHCP    bool     `json:"dhcp,omitempty"`
 }
 
 type PluginSettings struct {
 	Interfaces []*interfaceConfig `json:"interfaces"`
+}
+
+func (ps *PluginSettings) setDHCPOpt(name string, v bool) {
+	for _, i := range ps.Interfaces {
+		if i.Name == name {
+			i.DHCP = v
+			return
+		}
+	}
+
+	ps.Interfaces = append(ps.Interfaces, &interfaceConfig{
+		Name: name,
+		DHCP: v,
+	})
 }
 
 func (ps *PluginSettings) setAddr(name string, ip net.IPNet) {
@@ -63,7 +78,7 @@ func (ps *PluginSettings) addrExist(name string, ip net.IPNet) bool {
 	return false
 }
 
-func loadAddresses(Interfaces []*interfaceConfig) error {
+func loadAddresses(Interfaces []*interfaceConfig, dhcp *dhcpClientManager) error {
 	for _, i := range Interfaces {
 		link, err := netlink.LinkByName(i.Name)
 		if err != nil {
@@ -87,6 +102,10 @@ func loadAddresses(Interfaces []*interfaceConfig) error {
 				return err
 			}
 		}
+
+		if i.DHCP {
+			dhcp.runDHCPClient(link)
+		}
 	}
 
 	return nil
@@ -96,6 +115,8 @@ type Plugin struct {
 	api      PluginAPI
 	ctx      context.Context
 	settings PluginSettings
+
+	dhcp *dhcpClientManager
 }
 
 func (p *Plugin) ID() string {
@@ -119,7 +140,11 @@ func (p *Plugin) Run(ctx context.Context, api PluginAPI) error {
 		return err
 	}
 
-	err = loadAddresses(p.settings.Interfaces)
+	p.dhcp = NewDHCPClientManager(ctx, nil, func() {
+		p.api.Reload()
+	})
+
+	err = loadAddresses(p.settings.Interfaces, p.dhcp)
 	if err != nil {
 		return err
 	}
@@ -148,7 +173,44 @@ func (p *Plugin) Run(ctx context.Context, api PluginAPI) error {
 func (p *Plugin) Actions() ActionsMap {
 	return ActionsMap{
 		"select-dev": func(args []string, data io.Reader) ActionResult {
-			return NewSetArgsActionResult(args...)
+			return NewSetArgsActionResult(true, args...)
+		},
+
+		"dhcp-client": func(args []string, data io.Reader) ActionResult {
+			linkName := args[0]
+
+			reqData := struct {
+				DHCP bool `json:"dhcp"`
+			}{}
+
+			err := json.NewDecoder(data).Decode(&reqData)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			p.settings.setDHCPOpt(linkName, reqData.DHCP)
+
+			err = p.api.SaveModuleConfig(&p.settings)
+			if err != nil {
+				return NewErrorAlertActionResult(err)
+			}
+
+			if reqData.DHCP {
+				link, err := netlink.LinkByName(linkName)
+				if err != nil {
+					return NewErrorAlertActionResult(err)
+				}
+
+				p.dhcp.runDHCPClient(link)
+
+				return NewReloadActionResult()
+			}
+
+			if opt := p.dhcp.getDHCPOptions(linkName); opt != nil {
+				opt.stop()
+			}
+
+			return NewReloadActionResult()
 		},
 
 		"add-device": func(args []string, data io.Reader) ActionResult {
@@ -539,11 +601,17 @@ func (p *Plugin) renderDevice(devName string) Page {
 
 	addressTable := NewTable("#", "IP address", "Label", "", "")
 
+	dhcpOpt := p.dhcp.getDHCPOptions(devName)
+
 	for n, a := range addrs {
 		line := NewLine()
 
 		if p.settings.addrExist(devName, *a.IPNet) {
 			line.Add(NewBadge("manage").SetStyle(StyleSuccess))
+		}
+
+		if dhcpOpt != nil && dhcpOpt.addr != nil && dhcpOpt.addr.String() == a.IPNet.String() {
+			line.Add(NewBadge("dhcp").SetStyle(StylePrimary))
 		}
 
 		addressTable.AddLine(
@@ -592,8 +660,11 @@ func (p *Plugin) renderDevice(devName string) Page {
 		NewElementsList().SetModeLine().
 			AddElementWithTitle(NewLabel("Name").SetStrong(true), NewLabel(link.Attrs().Name)).
 			AddElementWithTitle(NewLabel("Type").SetStrong(true), NewLabel(link.Type())).
-			AddElementWithTitle(NewLabel("Mac").SetStrong(true), NewLabel(link.Attrs().HardwareAddr.String()).SetMonospace()).
-			AddElementWithTitle(NewLabel("Master").SetStrong(true), masterSelect),
+			AddElementWithTitle(NewLabel("Mac").SetStrong(true), NewLabel(link.Attrs().HardwareAddr.String()).SetMonospace(true)).
+			AddElementWithTitle(NewLabel("Master").SetStrong(true), masterSelect).
+			AddElementWithTitle(NewLabel("DHCP").SetStrong(true), NewSwitch("dhcp").
+				SetAction("dhcp-client", link.Attrs().Name).SetValue(dhcpOpt != nil),
+			),
 		NewHeader("IP addresses"),
 		NewButton("Add address", "add-ip-address", link.Attrs().Name, ""),
 		addressTable,
@@ -631,7 +702,7 @@ func (p *Plugin) renderDevList() Page {
 		table.AddLine(
 			NewButton(l.Attrs().Name, "select-dev", l.Attrs().Name).SetLinkStyle(),
 			NewLabel(l.Type()),
-			NewLabel(l.Attrs().HardwareAddr.String()).SetMonospace(),
+			NewLabel(l.Attrs().HardwareAddr.String()).SetMonospace(true),
 			addrsList,
 			controls,
 		)

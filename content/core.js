@@ -46,6 +46,7 @@ let core = {
                         data: data ? data : core.getFormData(e.target),
                     })
 
+                    // Close modal if open
                     let parent = el.parentNode
                     while (parent.localName !== "body") {
                         if (parent.classList.contains("modal")) {
@@ -318,7 +319,7 @@ let core = {
                 this.selectedModuleArgs = data.options.args;
 
                 core.pushState();
-                await core.renderModule(true);
+                await core.renderModule(data.options.fade);
 
                 return;
             case "alert":
@@ -352,8 +353,19 @@ let core = {
                 ], parent: document.body, cb: function (e) { modal = e }})
 
                 return
+            case "part-update":
+                let updatedElement = document.getElementById(`updated-element-${data.options.id}`)
+                if (!updatedElement) {
+                    return
+                }
+
+                let newElement = ui.build(uiTool.createElement(data.options.element))
+                ui.clear(updatedElement)
+                updatedElement.append(newElement)
+
+                return
             default:
-                await core.renderModule(false);
+                await core.renderModule(data.options.fade);
         }
     },
 

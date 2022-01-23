@@ -1,28 +1,6 @@
 let uiTool = {
     button: function(options) {
-        let element = "button"
-        let classes = []
-
-        if (options.style === "link") {
-            element = "a"
-        } else {
-            classes.push("btn", "btn-sm")
-
-            if (options.style) {
-                classes.push(`btn-${options.style}`)
-            }
-        }
-
-        if (options.action.cmd === "") {
-            classes.push("disabled")
-        }
-
-        return {
-            tag: element,
-            classes: classes,
-            onclick: core.actionFunc(options.action),
-            el: uiTool.createLabelElements(options)
-        }
+        return uiTool.buttonElement(uiTool.createLabelElements(options), options.style, options.action)
     },
 
     text: function(options) {
@@ -263,9 +241,125 @@ let uiTool = {
 
         return {tag: "table", classes: ["table", "table-hover"], el: [
             {tag: "thead", el: [
-                    {tag: "tr", el: header},
-                ]},
+                {tag: "tr", el: header},
+            ]},
             {tag: "tbody", el: body},
+        ]}
+    },
+
+    tableView: function(options) {
+        let header = []
+
+        for (const h of options.header) {
+            let th = {tag: "th", text: h.title}
+
+            if (h.width !== undefined) {
+                th.cb = function(e) {
+                    e.style.width = h.width
+                }
+            }
+
+            header.push(th)
+        }
+
+        let body = []
+
+        let tbody = null
+
+        if (options.body) {
+            for (const line of options.body) {
+                let lineItems = []
+
+                for (const h of options.header) {
+                    let el = null
+                    switch (h.type) {
+                        case "text":
+                            el = {text: line[h.items[0]]}
+                            break;
+                        case "button":
+                            let args = []
+
+                            for (const i of h.items.slice(3)) {
+                                args.push(line[i])
+                            }
+
+                            el = uiTool.buttonElement([{text: line[h.items[0]]}], line[h.items[1]], {
+                                cmd: line[h.items[2]],
+                                args: args,
+                            })
+
+                            break
+                        case "icon":
+                            el = {tag: "i", classes: ["bi", `bi-${line[h.items[0]]}`]}
+                    }
+
+                    let selectCount = function (){
+                        let num = 0
+
+                        for (const tr of tbody.children) {
+                            if (tr.classList.contains("selected")) {
+                                num++
+                            }
+                        }
+
+                        return num
+                    }
+
+                    let onclick = function(e, el) {
+                        if (e.target !== el) {
+                            return
+                        }
+
+                        let selected = selectCount()
+
+                        if (!e.ctrlKey) {
+                            for (const tr of tbody.children) {
+                                if (tr !== el.parentNode) {
+                                    tr.classList.remove("selected")
+                                }
+                            }
+                        }
+
+                        if (selected < 2) {
+                            el.parentNode.classList.toggle("selected")
+                        } else {
+                            el.parentNode.classList.add("selected")
+                        }
+
+                        let data = []
+
+                        for (const tr of tbody.children) {
+                            if (tr.classList.contains("selected")) {
+                                data.push(tr.dataset.value)
+                            }
+                        }
+
+                        core.actionFunc(options["select-action"], null, data)(e, el)
+                        return false
+                    }
+
+                    let td = {tag: "td", el: [el], onclick: options["select-action"] ? onclick : null}
+
+                    if (h.width !== undefined) {
+                        td.cb = function(e) {
+                            e.style.width = h.width
+                        }
+                    }
+
+                    lineItems.push(td)
+                }
+
+                body.push({tag: "tr", el: lineItems, cb : function(e) {
+                    e.dataset.value = line[options["data-item"]]
+                }})
+            }
+        }
+
+        return {tag: "table", classes: ["table", "table-hover", "scrolled-table"], el: [
+            {tag: "thead", el: [
+                {tag: "tr", el: header},
+            ]},
+            {tag: "tbody", el: body, cb: function(e) { tbody = e }},
         ]}
     },
 
@@ -509,8 +603,12 @@ let uiTool = {
     line: function(options) {
         let elements = []
 
-        for (const el of options.elements) {
-            elements.push({tag: "div", classes: ["me-2"], el: [uiTool.createElement(el)]})
+        for (const i of options.items) {
+            elements.push({tag: "div", classes: ["me-2"], el: [uiTool.createElement(i.element)], cb: function(e) {
+                if (i.flex) {
+                    e.style.flex = `${i.flex}`
+                }
+            }})
         }
 
         return {tag: "div", classes: ["d-flex"], el: elements}
@@ -522,12 +620,18 @@ let uiTool = {
         ]}
     },
 
-    terminal: function() {
+    terminal: function(options) {
         return {tag: "div", id: "terminal", cb: function (e) {
             let term = new Terminal();
             term.open(e);
             term.write('Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ')
         }}
+    },
+
+    updatedElement: function(options) {
+        return {tag: "div", id: `updated-element-${options.id}`, el: [
+            uiTool.createElement(options.element)
+        ]}
     },
 
     createElement: function(element) {
@@ -556,6 +660,8 @@ let uiTool = {
                 return uiTool.form(element.options);
             case "table":
                 return uiTool.table(element.options);
+            case "tableView":
+                return uiTool.tableView(element.options);
             case "badge":
                 return uiTool.badge(element.options);
             case "image":
@@ -582,8 +688,36 @@ let uiTool = {
                 return uiTool.progress(element.options);
             case "terminal":
                 return uiTool.terminal(element.options);
+            case "updated-element":
+                return uiTool.updatedElement(element.options);
             default:
                 console.warn(`un know element type: ${element.type}`);
+        }
+    },
+
+    buttonElement: function(el, style, action) {
+        let element = "button"
+        let classes = []
+
+        if (style === "link") {
+            element = "a"
+        } else {
+            classes.push("btn", "btn-sm")
+
+            if (style) {
+                classes.push(`btn-${style}`)
+            }
+        }
+
+        if (action.cmd === "") {
+            classes.push("disabled")
+        }
+
+        return {
+            tag: element,
+            classes: classes,
+            onclick: core.actionFunc(action),
+            el: el,
         }
     },
 

@@ -27,8 +27,8 @@ func (l *Label) SetStrong(value bool) *Label {
 	return l
 }
 
-func (l *Label) SetMonospace() *Label {
-	l.options.Monospace = true
+func (l *Label) SetMonospace(value bool) *Label {
+	l.options.Monospace = value
 
 	return l
 }

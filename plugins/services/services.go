@@ -289,12 +289,12 @@ func (p *Plugin) Actions() ActionsMap {
 
 		"select-service": func(args []string, data io.Reader) ActionResult {
 			if len(args) == 0 {
-				return NewSetArgsActionResult()
+				return NewSetArgsActionResult(true)
 			}
 
 			serviceID := uuid.UUID(args[0])
 
-			return NewSetArgsActionResult(serviceID.String())
+			return NewSetArgsActionResult(true, serviceID.String())
 		},
 
 		"rename": func(args []string, data io.Reader) ActionResult {
@@ -581,7 +581,7 @@ func (p *Plugin) RenderService(serviceID uuid.UUID) Page {
 			).
 			AddElementWithTitle(
 				NewLabel("Auto start").SetStrong(true),
-				NewSwitch("autostart").SetAction(NewAction("update", serviceID.String())).SetValue(s.Autostart),
+				NewSwitch("autostart").SetAction("update", serviceID.String()).SetValue(s.Autostart),
 			),
 		NewHeader("Service status"),
 		NewElementsList().SetModeLine().

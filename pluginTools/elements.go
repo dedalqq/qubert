@@ -53,6 +53,7 @@ const (
 	ElementTypeElementsList             = "element-list"
 	ElementTypeForm                     = "form"
 	ElementTypeTable                    = "table"
+	ElementTypeTableView                = "tableView"
 	ElementTypeBadge                    = "badge"
 	ElementTypeImage                    = "image"
 	ElementTypeHeader                   = "header"
@@ -65,6 +66,7 @@ const (
 	ElementLine                         = "line"
 	ElementProgress                     = "progress"
 	ElementTerminal                     = "terminal"
+	ElementUpdated                      = "updated-element"
 )
 
 type Element interface {
@@ -97,13 +99,6 @@ type ElementStruct struct {
 type Action struct {
 	CMD  string   `json:"cmd"`
 	Args []string `json:"args,omitempty"`
-}
-
-func NewAction(cmd string, args ...string) *Action {
-	return &Action{
-		CMD:  cmd,
-		Args: args,
-	}
 }
 
 func MarshalJSON(elementType ElementType, option interface{}) ([]byte, error) {

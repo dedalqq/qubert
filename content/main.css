@@ -7,6 +7,20 @@ body {
     overflow-y: scroll;
 }
 
+*::-webkit-scrollbar {
+    position:relative;
+    width: 5px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #97763a00;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: #bdbdbd;
+    border-radius: 20px;
+}
+
 .login {
     top: 100px;
     padding: 25px;
