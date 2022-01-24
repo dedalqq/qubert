@@ -27,10 +27,10 @@ go.sum:
 	go mod tidy
 
 build/qubert-linux-x86-64: $(DEPENDS)
-	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-x86-64 *.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-x86-64 *.go
 
 build/qubert-linux-arm64: $(DEPENDS)
-	GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-arm64 *.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-arm64 *.go
 
 clean:
 	rm -f go.sum resources/data.go build/qubert*
