@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"qubert/logger"
+	"qubert/internal/logger"
 )
 
 const (

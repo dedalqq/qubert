@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/jessevdk/go-flags"
 	"os"
 	"syscall"
 
+	"github.com/jessevdk/go-flags"
+	"qubert/internal/config"
+	"qubert/internal/installer"
+	"qubert/internal/logger"
+
 	"qubert/application"
-	"qubert/logger"
 )
 
 var (
@@ -20,6 +23,7 @@ type options struct {
 	ConfigFile  string `short:"c" long:"config" description:"Config file"`
 	Daemon      bool   `short:"d" long:"daemon" description:"Run as daemon"`
 	ShowVersion bool   `short:"v" long:"version" description:"Show version and exit"`
+	Install     bool   `short:"i" long:"install" description:"Install and run"`
 }
 
 func main() {
@@ -90,11 +94,33 @@ func mainFunc(args []string) error {
 		return err
 	}
 
+	if opt.Install && opt.Daemon {
+		return fmt.Errorf("using 'install' and 'daemon' is not supported at the same time")
+	}
+
 	if opt.Daemon {
 		err = RunInBackground(args)
 		if err != nil {
 			return err
 		}
+	}
+
+	cfg, err := config.Load(opt.ConfigFile)
+	if err != nil {
+		return err
+	}
+
+	if opt.Install {
+		log := logger.CreateLogger(false)
+
+		err = installer.InstallCurrentVersion(cfg, log)
+		if err != nil {
+			return err
+		}
+
+		log.Info("successfully installed")
+
+		os.Exit(0)
 	}
 
 	if opt.ShowVersion {
@@ -108,11 +134,6 @@ Git commit: %s
 	}
 
 	ctx := context.Background()
-
-	cfg, err := getConfig(opt.ConfigFile)
-	if err != nil {
-		return err
-	}
 
 	app := application.NewApplication(cfg, Version, Commit)
 

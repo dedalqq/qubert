@@ -6,15 +6,16 @@ LDFLAGS := -X main.Version=$(VERSION) -X main.Commit=$(COMMIT) -s -w
 
 DEPENDS := go.sum \
 	resources/data.go \
-	config.go \
 	main.go \
 	application/*.go \
-	logger/*.go \
 	plugins/*/*.go \
 	resources/storage.go \
 	tools/*.go \
 	uuid/*.go \
-	pluginTools/*.go
+	pluginTools/*.go \
+	internal/logger/*.go \
+	internal/installer/*.go \
+	internal/config/*.go
 
 all: build
 
@@ -27,7 +28,7 @@ go.sum:
 	go mod tidy
 
 build/qubert-linux-x86-64: $(DEPENDS)
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-x86-64 *.go
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-amd64 *.go
 
 build/qubert-linux-arm64: $(DEPENDS)
 	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "$(LDFLAGS)" -o build/qubert-linux-arm64 *.go

@@ -9,8 +9,7 @@ import (
 	"github.com/insomniacslk/dhcp/dhcpv4"
 	"github.com/insomniacslk/dhcp/dhcpv4/client4"
 	"github.com/vishvananda/netlink"
-
-	"qubert/logger"
+	"qubert/internal/logger"
 )
 
 type dhcpClientOptions struct {

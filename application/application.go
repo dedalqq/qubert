@@ -11,13 +11,12 @@ import (
 
 	"github.com/dedalqq/omg.httpserver"
 
-	"qubert/logger"
-	"qubert/resources"
-
+	"qubert/internal/logger"
 	"qubert/plugins/interfaces"
 	"qubert/plugins/services"
 	"qubert/plugins/system"
 	"qubert/plugins/systemd"
+	"qubert/resources"
 )
 
 type Application struct {
@@ -77,14 +76,12 @@ func (a *Application) Run(ctx context.Context) error {
 
 	a.sm = newSessionManager(ctx)
 
-	a.pc = newPluginController(
-		a.cfg.SettingsFile,
-		a.sm,
-		&services.Plugin{},
-		&interfaces.Plugin{},
-		&systemd.Plugin{},
-		&system.Plugin{},
-	)
+	var err error
+
+	a.pc, err = newPluginController(a.cfg.SettingsFile, a.sm)
+	if err != nil {
+		return err
+	}
 
 	a.pc.setVersion(a.version, a.commit)
 
@@ -106,11 +103,27 @@ func (a *Application) Run(ctx context.Context) error {
 
 	var wg sync.WaitGroup
 
-	err := a.pc.initPlugins(ctx, &wg)
+	err = a.pc.initPlugins(ctx, &wg, a.log,
+		&services.Plugin{},
+		&interfaces.Plugin{},
+		&systemd.Plugin{},
+		&system.Plugin{},
+	)
+
 	if err != nil {
 		a.log.Error(err)
 
 		cancelContext(ctx)
+	}
+
+	extPlugins, err := a.pc.loadExternalPlugins(a.cfg.PluginDir, a.log)
+	if err != nil {
+		a.log.Error(err)
+	}
+
+	err = a.pc.initPlugins(ctx, &wg, a.log, extPlugins...)
+	if err != nil {
+		a.log.Error(err)
 	}
 
 	runSignalHandler(ctx, &wg, a.log)

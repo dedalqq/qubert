@@ -7,9 +7,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
+	"path/filepath"
+	"plugin"
 	"sync"
 	"syscall"
 
+	"qubert/internal/logger"
 	"qubert/pluginTools"
 )
 
@@ -100,7 +104,7 @@ func (i *pluginAPI) Version() (string, string) {
 	return i.c.version, i.c.commit
 }
 
-type plugin interface {
+type iPlugin interface {
 	ID() string
 	Title() string
 	Icon() string
@@ -141,23 +145,24 @@ type pluginController struct {
 
 	sessions *sessionManager
 
-	plugins []plugin
+	plugins []iPlugin
 
 	version string
 	commit  string
 }
 
-func newPluginController(settingsFile string, sessions *sessionManager, pp ...plugin) *pluginController {
-	pc := &pluginController{
+func newPluginController(settingsFile string, sessions *sessionManager) (*pluginController, error) {
+	c := &pluginController{
 		settingsFile: settingsFile,
 		sessions:     sessions,
 	}
 
-	for _, p := range pp {
-		pc.addPlugin(p)
+	err := c.loadSettings()
+	if err != nil {
+		return nil, err
 	}
 
-	return pc
+	return c, nil
 }
 
 func (c *pluginController) setVersion(version string, commit string) {
@@ -185,6 +190,11 @@ func (c *pluginController) loadSettings() error {
 }
 
 func (c *pluginController) saveSettings() error {
+	err := os.MkdirAll(path.Dir(c.settingsFile), 0744)
+	if err != nil {
+		return err
+	}
+
 	file, err := os.Create(c.settingsFile)
 	if err != nil {
 		return err
@@ -202,22 +212,17 @@ func (c *pluginController) saveSettings() error {
 	return nil
 }
 
-func (c *pluginController) addPlugin(p plugin) {
+func (c *pluginController) initPlugins(ctx context.Context, wg *sync.WaitGroup, log *logger.Logger, pp ...iPlugin) error {
+	var err error
+
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
-	c.plugins = append(c.plugins, p)
-}
+	for _, p := range pp {
+		c.plugins = append(c.plugins, p)
 
-func (c *pluginController) initPlugins(ctx context.Context, wg *sync.WaitGroup) error {
-	err := c.loadSettings()
-	if err != nil {
-		return err
-	}
-
-	for _, p := range c.plugins {
 		wg.Add(1)
-		go func(p plugin) {
+		go func(p iPlugin) {
 			defer wg.Done()
 			err = p.Run(ctx, &pluginAPI{
 				moduleID: p.ID(),
@@ -228,7 +233,7 @@ func (c *pluginController) initPlugins(ctx context.Context, wg *sync.WaitGroup) 
 			})
 
 			if err != nil {
-				fmt.Println(err) // TODO
+				log.Error(err)
 			}
 		}(p)
 	}
@@ -236,11 +241,41 @@ func (c *pluginController) initPlugins(ctx context.Context, wg *sync.WaitGroup) 
 	return nil
 }
 
-func (c *pluginController) pluginsList() []plugin {
+func (c *pluginController) loadExternalPlugins(dir string, log *logger.Logger) ([]iPlugin, error) {
+	files, err := filepath.Glob(filepath.Join(dir, "*.so"))
+	if err != nil {
+		return nil, err
+	}
+
+	var externalPlugins []iPlugin
+
+	for _, f := range files {
+		fmt.Println(f)
+		p, err := plugin.Open(f)
+		if err != nil {
+			log.Error(err)
+		}
+
+		i, err := p.Lookup("PluginInstance")
+		if err != nil {
+			log.Error(err)
+		}
+
+		if pl, ok := i.(iPlugin); ok {
+			externalPlugins = append(externalPlugins, pl)
+		} else {
+			log.Error(fmt.Errorf("failed to load [%s] plugin", f))
+		}
+	}
+
+	return externalPlugins, nil
+}
+
+func (c *pluginController) pluginsList() []iPlugin {
 	return c.plugins
 }
 
-func (c *pluginController) pluginByID(id string) plugin {
+func (c *pluginController) pluginByID(id string) iPlugin {
 	for _, p := range c.plugins {
 		if p.ID() == id {
 			return p

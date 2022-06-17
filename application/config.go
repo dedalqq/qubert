@@ -5,6 +5,7 @@ type Config struct {
 	Host           string `json:"host"`
 	Port           uint16 `json:"port"`
 	SettingsFile   string `json:"settings-file"`
+	PluginDir      string `json:"plugin-dir"`
 	HostBadgeColor string `json:"host-badge-color,omitempty"`
 }
 
@@ -14,5 +15,6 @@ func DefaultConfig() *Config {
 		Host:         "",
 		Port:         8080,
 		SettingsFile: "./settings.json",
+		PluginDir:    ".",
 	}
 }
