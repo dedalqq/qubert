@@ -49,6 +49,7 @@ let uiTool = {
             type: options.type,
             value: options.value,
             autocomplete: options.name,
+            disabled: options.disabled,
         }]
 
         if (options.error !== undefined) {
@@ -77,6 +78,7 @@ let uiTool = {
             name: options.name,
             id: options.id,
             el: selectOptions,
+            disabled: options.disabled,
         }
 
         if (options["change-action"]) {

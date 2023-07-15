@@ -12,6 +12,7 @@ import (
 	"github.com/dedalqq/omg.httpserver"
 
 	"qubert/internal/logger"
+	"qubert/plugins/dns"
 	"qubert/plugins/interfaces"
 	"qubert/plugins/services"
 	"qubert/plugins/system"
@@ -106,6 +107,7 @@ func (a *Application) Run(ctx context.Context) error {
 	err = a.pc.initPlugins(ctx, &wg, a.log,
 		&services.Plugin{},
 		&interfaces.Plugin{},
+		&dns.Plugin{},
 		&systemd.Plugin{},
 		&system.Plugin{},
 	)

@@ -361,7 +361,7 @@ main:
 	)
 }
 
-func jsonDump(data interface{}) string {
+func jsonDump(data any) string {
 	buf := bytes.NewBuffer([]byte{})
 	enc := json.NewEncoder(buf)
 	enc.SetIndent("", "    ")

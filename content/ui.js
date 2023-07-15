@@ -1,4 +1,10 @@
 let ui = {
+    attrs: [
+        "id", "for", "role", "href", "type", "name", "value", "scope",
+        "placeholder", "tabindex", "autocomplete", "width", "height", "list",
+        "src", "selected", "checked", "disabled"
+    ],
+
     build: function (obj) {
         if (obj.tag === undefined) {
             if (obj.text !== undefined) {
@@ -31,7 +37,7 @@ let ui = {
                 el.href = "#"
             }
 
-            for (let opt of ["id", "for", "role", "href", "type", "name", "value", "scope", "placeholder", "tabindex", "autocomplete", "width", "height", "list", "src", "selected", "checked"]) {
+            for (let opt of this.attrs) {
                 if (obj[opt] !== undefined) {
                     el.setAttribute(opt, obj[opt])
                 }

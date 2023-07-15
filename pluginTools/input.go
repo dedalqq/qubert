@@ -4,6 +4,7 @@ type InputOptions struct {
 	Type      string      `json:"type"`
 	Name      string      `json:"name"`
 	ElementID string      `json:"id"`
+	Disabled  bool        `json:"disabled,omitempty"`
 	Value     interface{} `json:"value,omitempty"`
 	Error     string      `json:"error,omitempty"`
 }
@@ -39,6 +40,12 @@ func (i *Input) SetValue(v string) *Input {
 
 func (i *Input) SetErrorText(text string) *Input {
 	i.options.Error = text
+
+	return i
+}
+
+func (i *Input) SetDisable(value bool) *Input {
+	i.options.Disabled = value
 
 	return i
 }

@@ -5,6 +5,7 @@ type SelectOptions struct {
 	ElementID    string            `json:"id"`
 	Value        string            `json:"value,omitempty"`
 	Options      map[string]string `json:"options"`
+	Disabled     bool              `json:"disabled,omitempty"`
 	ChangeAction *Action           `json:"change-action,omitempty"`
 	Error        string            `json:"error,omitempty"`
 }
@@ -55,6 +56,12 @@ func (s *Select) SetChangeAction(action string, args ...string) *Select {
 		CMD:  action,
 		Args: args,
 	}
+
+	return s
+}
+
+func (s *Select) SetDisable(value bool) *Select {
+	s.options.Disabled = value
 
 	return s
 }
