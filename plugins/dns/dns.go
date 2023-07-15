@@ -22,7 +22,7 @@ const (
 	RecordTypeMX    = "MX"
 	RecordTypeCNAME = "CNAME"
 	RecordTypeDNAME = "DNAME"
-	RecordTypeTEXT  = "TEXT"
+	RecordTypeTXT   = "TXT"
 	RecordTypePTR   = "PTR"
 	RecordTypeSRV   = "SRV"
 )
@@ -33,7 +33,7 @@ var allType = []RecordType{
 	RecordTypeMX,
 	RecordTypeCNAME,
 	RecordTypeDNAME,
-	RecordTypeTEXT,
+	RecordTypeTXT,
 	RecordTypePTR,
 	RecordTypeSRV,
 }
