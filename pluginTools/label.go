@@ -15,6 +15,12 @@ type Label struct {
 func (l *Label) Type() ElementType            { return ElementTypeLabel }
 func (l *Label) MarshalJSON() ([]byte, error) { return MarshalJSON(l.Type(), l.options) }
 
+func (l *Label) SetText(text string, a ...interface{}) *Label {
+	l.options.Text = fmt.Sprintf(text, a...)
+
+	return l
+}
+
 func (l *Label) SetImage(icon string) *Label {
 	l.options.Icon = icon
 

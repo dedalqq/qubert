@@ -77,7 +77,12 @@ func renderZone(f io.Writer, zone *Zone) error {
 	}
 
 	for _, r := range zone.Records {
-		err = fprintf(f, line("%s IN %s %s", r.Name, r.Type, r.Value))
+		if r.Type == RecordTypeMX {
+			err = fprintf(f, line("%s IN %s %d %s", r.Name, r.Type, r.Priority, r.Value))
+		} else {
+			err = fprintf(f, line("%s IN %s %s", r.Name, r.Type, r.Value))
+		}
+
 		if err != nil {
 			return err
 		}

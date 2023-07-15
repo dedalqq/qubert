@@ -21,6 +21,10 @@ body {
     border-radius: 20px;
 }
 
+span {
+    word-break: break-word;
+}
+
 .login {
     top: 100px;
     padding: 25px;

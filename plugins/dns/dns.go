@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"time"
 
 	. "qubert/pluginTools"
@@ -44,9 +45,10 @@ type NameServer struct {
 }
 
 type Record struct {
-	Name  string     `json:"name"`
-	Type  RecordType `json:"type"`
-	Value string     `json:"value"`
+	Name     string     `json:"name"`
+	Type     RecordType `json:"type"`
+	Priority int        `json:"priority,omitempty"`
+	Value    string     `json:"value"`
 }
 
 type SOA struct {
@@ -85,11 +87,12 @@ func (z *Zone) recordByNameType(name string, t RecordType) *Record {
 	return nil
 }
 
-func (z *Zone) addRecord(name string, t RecordType, value string) {
+func (z *Zone) addRecord(name string, t RecordType, priority int, value string) {
 	z.Records = append(z.Records, &Record{
-		Name:  name,
-		Type:  t,
-		Value: value,
+		Name:     name,
+		Type:     t,
+		Priority: priority,
+		Value:    value,
 	})
 }
 
@@ -354,7 +357,7 @@ func (p *Plugin) Actions() ActionsMap {
 					return formResponse
 				}
 
-				zone.addRecord(reqData.Name, reqData.Type, reqData.Value)
+				zone.addRecord(reqData.Name, reqData.Type, reqData.Priority, reqData.Value)
 
 				err = p.api.SaveModuleConfig(&p.settings)
 				if err != nil {
@@ -402,6 +405,7 @@ func (p *Plugin) Actions() ActionsMap {
 				}
 
 				record.Value = reqData.Value
+				record.Priority = reqData.Priority
 
 				err = p.api.SaveModuleConfig(&p.settings)
 				if err != nil {
@@ -463,23 +467,30 @@ func (p *Plugin) Actions() ActionsMap {
 }
 
 type zoneRecordForm struct {
-	nameInput  *Input
-	typeInput  *Select
-	valueInput *Input
+	nameInput     *Input
+	typeInput     *Select
+	priorityInput *NumberInput
+	valueInput    *Input
 }
 
 func newZoneRecordForm(record *Record, action string, args ...string) (*zoneRecordForm, *Form) {
 	nameInput := NewInput("name")
 	typeInput := NewSelect("type")
+	priorityInput := NewNumberInput("priority")
 	valueInput := NewInput("value")
 
 	for _, t := range allType {
 		typeInput.AddOption(string(t))
 	}
 
+	buttonText := "Add"
+
 	if record != nil {
+		buttonText = "Save"
+
 		nameInput.SetValue(record.Name)
 		typeInput.SetValue(string(record.Type))
+		priorityInput.SetValue(record.Priority)
 		valueInput.SetValue(record.Value)
 
 		nameInput.SetDisable(true)
@@ -487,22 +498,27 @@ func newZoneRecordForm(record *Record, action string, args ...string) (*zoneReco
 	}
 
 	form := NewForm()
+
 	form.AddWithTitle("Name", nameInput)
 	form.AddWithTitle("Record type", typeInput)
+	form.AddWithTitle("Priority", priorityInput)
 	form.AddWithTitle("Value", valueInput)
-	form.AddActionButtons(NewButton("Add", action, args...))
+
+	form.AddActionButtons(NewButton(buttonText, action, args...))
 
 	return &zoneRecordForm{
-		nameInput:  nameInput,
-		typeInput:  typeInput,
-		valueInput: valueInput,
+		nameInput:     nameInput,
+		typeInput:     typeInput,
+		priorityInput: priorityInput,
+		valueInput:    valueInput,
 	}, form
 }
 
 type recordData struct {
-	Name  string     `json:"name"`
-	Type  RecordType `json:"type"`
-	Value string     `json:"value"`
+	Name     string     `json:"name"`
+	Type     RecordType `json:"type"`
+	Priority int        `json:"priority"`
+	Value    string     `json:"value"`
 }
 
 func (f *zoneRecordForm) setExistError() {
@@ -517,8 +533,12 @@ func (f *zoneRecordForm) parseAndValidate(data io.Reader) (*recordData, error) {
 		return nil, err
 	}
 
+	reqData.Name = strings.TrimSpace(reqData.Name)
+	reqData.Value = strings.TrimSpace(reqData.Value)
+
 	f.nameInput.SetValue(reqData.Name)
 	f.typeInput.SetValue(string(reqData.Type))
+	f.priorityInput.SetValue(reqData.Priority)
 	f.valueInput.SetValue(reqData.Value)
 
 	if reqData.Name == "" {
@@ -559,7 +579,7 @@ func (p *Plugin) Render(args []string) Page {
 
 func (p *Plugin) renderZone(zoneName string) Page {
 	if zone := p.settings.zoneByName(zoneName); zone != nil {
-		recordsTable := NewTable("name", "type", "value", "")
+		recordsTable := NewTable("Name", "Type", "Priority", "Value", "")
 
 		for _, r := range zone.Records {
 			dd := NewDropdown()
@@ -567,9 +587,15 @@ func (p *Plugin) renderZone(zoneName string) Page {
 			dd.AddSeparator()
 			dd.AddDangerItem("trash", "Delete", "delete-record", zoneName, r.Name, string(r.Type), "confirm")
 
+			priority := NewLabel("")
+			if r.Type == RecordTypeMX {
+				priority.SetText("%d", r.Priority)
+			}
+
 			recordsTable.AddLine(
 				NewLabel(r.Name),
 				NewBadge(string(r.Type)),
+				priority,
 				NewLabel(r.Value).SetMonospace(true),
 				dd,
 			)
